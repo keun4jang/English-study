@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -12,7 +13,7 @@ export default function AboutScreen() {
   return (
     <Screen>
       <View style={{ gap: spacing.lg, alignItems: 'center', paddingTop: spacing.xxl }}>
-        <AppText style={{ fontSize: 56, lineHeight: 68 }}>📖</AppText>
+        <AppIcon name="book-open" size={48} color="accent" />
         <AppText variant="title">{appConfig.appName}</AppText>
         <AppText variant="bodySmall" color="secondary" align="center">
           {appConfig.tagline}

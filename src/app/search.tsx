@@ -53,14 +53,14 @@ export default function SearchScreen() {
         />
         <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
           <Chip label="전체" selected={filter === 'all'} onPress={() => setFilter('all')} />
-          <Chip label="⭐ 즐겨찾기" selected={filter === 'favorite'} onPress={() => setFilter('favorite')} />
-          <Chip label="🇺🇸 영어" selected={filter === 'en'} onPress={() => setFilter('en')} />
-          <Chip label="🇯🇵 일본어" selected={filter === 'ja'} onPress={() => setFilter('ja')} />
+          <Chip label="즐겨찾기" selected={filter === 'favorite'} onPress={() => setFilter('favorite')} />
+          <Chip label="영어" selected={filter === 'en'} onPress={() => setFilter('en')} />
+          <Chip label="일본어" selected={filter === 'ja'} onPress={() => setFilter('ja')} />
         </View>
 
         {results.length === 0 ? (
           <EmptyState
-            emoji="🔍"
+            icon="search"
             title={debounced ? '검색 결과가 없어요' : '아직 일기가 없어요'}
             description={debounced ? '다른 단어로 검색해 볼까요?' : '일기를 쓰면 여기서 찾을 수 있어요.'}
           />

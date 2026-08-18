@@ -2,14 +2,15 @@ import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { DiaryCard } from '@/components/diary/DiaryCard';
+import { DiaryRow } from '@/components/diary/DiaryRow';
+import { AppIcon, AppMciIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { emotionEmoji } from '@/components/ui/EmotionPicker';
+import { Card } from '@/components/ui/Card';
+import { emotionIconName } from '@/components/ui/EmotionPicker';
 import { Screen } from '@/components/ui/Screen';
 import { VersionFooter } from '@/components/ui/VersionFooter';
-import { monthInfo, todayKey } from '@/lib/dates';
+import { formatDateKo, monthInfo, todayKey } from '@/lib/dates';
 import { selectActiveEntries, selectEntriesByDate, useDiary } from '@/state/useDiary';
 import { useSettings } from '@/state/useSettings';
 import { MIN_TOUCH_TARGET, radius, spacing } from '@/theme/tokens';
@@ -71,23 +72,59 @@ export default function CalendarTab() {
   return (
     <Screen>
       <View style={{ gap: spacing.lg }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button small variant="ghost" label="◀ 이전" onPress={() => moveMonth(-1)} />
+        <View
+          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="이전 달"
+            hitSlop={12}
+            onPress={() => moveMonth(-1)}
+            style={({ pressed }) => ({
+              minWidth: MIN_TOUCH_TARGET,
+              minHeight: MIN_TOUCH_TARGET,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: radius.md,
+              backgroundColor: pressed ? colors.pressedBackground : 'transparent',
+            })}
+          >
+            <AppIcon name="chevron-left" size={22} color="primary" decorative={false} />
+          </Pressable>
           <AppText variant="heading">
             {year}년 {month}월
           </AppText>
-          <Button small variant="ghost" label="다음 ▶" onPress={() => moveMonth(1)} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="다음 달"
+            hitSlop={12}
+            onPress={() => moveMonth(1)}
+            style={({ pressed }) => ({
+              minWidth: MIN_TOUCH_TARGET,
+              minHeight: MIN_TOUCH_TARGET,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: radius.md,
+              backgroundColor: pressed ? colors.pressedBackground : 'transparent',
+            })}
+          >
+            <AppIcon name="chevron-right" size={22} color="primary" decorative={false} />
+          </Pressable>
         </View>
-        <Button
-          small
-          variant="secondary"
-          label="오늘로 이동"
-          onPress={() => {
-            setYear(ty);
-            setMonth(tm);
-            setSelectedDate(today);
-          }}
-        />
+
+        {selectedDate !== today || year !== ty || month !== tm ? (
+          <Button
+            size="compact"
+            variant="ghost"
+            icon="calendar"
+            label="오늘로 이동"
+            onPress={() => {
+              setYear(ty);
+              setMonth(tm);
+              setSelectedDate(today);
+            }}
+          />
+        ) : null}
 
         <View>
           <View style={{ flexDirection: 'row' }}>
@@ -103,36 +140,51 @@ export default function CalendarTab() {
             <View key={row} style={{ flexDirection: 'row' }}>
               {cells.slice(row * 7, row * 7 + 7).map((day, col) => {
                 if (day === null) {
-                  return <View key={col} style={{ flex: 1, minHeight: MIN_TOUCH_TARGET + 8 }} />;
+                  return <View key={col} style={{ flex: 1, minHeight: 48 }} />;
                 }
                 const key = dateKeyOf(day);
                 const dayEntries = byDate.get(key) ?? [];
                 const isToday = key === today;
                 const isSelected = key === selectedDate;
+                const label = `${month}월 ${day}일${isToday ? ', 오늘' : ''}${
+                  dayEntries.length ? `, 일기 ${dayEntries.length}개` : ''
+                }`;
                 return (
                   <Pressable
                     key={col}
                     accessibilityRole="button"
-                    accessibilityLabel={`${month}월 ${day}일${dayEntries.length ? `, 일기 ${dayEntries.length}개` : ''}`}
+                    accessibilityLabel={label}
+                    accessibilityState={{ selected: isSelected }}
                     onPress={() => setSelectedDate(key)}
-                    style={{
+                    style={({ pressed }) => ({
                       flex: 1,
-                      minHeight: MIN_TOUCH_TARGET + 8,
+                      minHeight: 48,
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderRadius: radius.md,
-                      backgroundColor: isSelected ? colors.primarySoft : 'transparent',
-                      borderWidth: isToday ? 1.5 : 0,
+                      backgroundColor: isSelected
+                        ? colors.primarySoft
+                        : pressed
+                          ? colors.pressedBackground
+                          : 'transparent',
+                      borderWidth: isSelected ? 2 : isToday ? 1.5 : 0,
                       borderColor: colors.primary,
                       margin: 1,
-                    }}
+                      gap: 1,
+                    })}
                   >
-                    <AppText variant="bodySmall" weight={isToday ? '700' : '400'}>
+                    <AppText variant="bodySmall" weight={isToday || isSelected ? '600' : '400'}>
                       {day}
                     </AppText>
-                    <AppText variant="caption" accessibilityElementsHidden>
-                      {dayEntries.length > 0 ? emotionEmoji(dayEntries[0].emotion) : ' '}
-                    </AppText>
+                    <View style={{ height: 16, justifyContent: 'center' }}>
+                      {dayEntries.length > 0 ? (
+                        <AppMciIcon
+                          name={emotionIconName(dayEntries[0].emotion)}
+                          size={14}
+                          color="accent"
+                        />
+                      ) : null}
+                    </View>
                   </Pressable>
                 );
               })}
@@ -141,22 +193,22 @@ export default function CalendarTab() {
         </View>
 
         <View style={{ gap: spacing.md }}>
-          <AppText variant="subheading">{selectedDate}</AppText>
+          <AppText variant="subheading">{formatDateKo(selectedDate)}</AppText>
           {selectedEntries.length === 0 ? (
-            <EmptyState
-              emoji="🌙"
-              title="이 날의 기록이 없어요"
-              description="지난 날의 기록이 없어도 괜찮아요. 오늘부터 시작해도 충분해요."
-            />
+            <AppText variant="bodySmall" color="secondary">
+              이 날의 기록이 없어요. 지난 날의 기록이 없어도 괜찮아요.
+            </AppText>
           ) : (
-            selectedEntries.map((entry) => (
-              <DiaryCard
-                key={entry.id}
-                entry={entry}
-                showDate={false}
-                onPress={() => router.push({ pathname: '/diary/[id]', params: { id: entry.id } })}
-              />
-            ))
+            <Card style={{ paddingVertical: spacing.xs }}>
+              {selectedEntries.map((entry, i) => (
+                <DiaryRow
+                  key={entry.id}
+                  entry={entry}
+                  showDivider={i < selectedEntries.length - 1}
+                  onPress={() => router.push({ pathname: '/diary/[id]', params: { id: entry.id } })}
+                />
+              ))}
+            </Card>
           )}
         </View>
       </View>

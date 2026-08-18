@@ -25,7 +25,7 @@ import { useTheme } from '@/theme/useTheme';
 
 function SectionTitle({ children }: { children: string }) {
   return (
-    <AppText variant="heading" style={{ marginTop: spacing.md }}>
+    <AppText variant="label" color="secondary" style={{ marginTop: spacing.md }}>
       {children}
     </AppText>
   );
@@ -44,7 +44,7 @@ function ToggleRow({
 }) {
   const { colors } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52 }}>
       <View style={{ flex: 1 }}>
         <AppText variant="body">{label}</AppText>
         {description ? (
@@ -56,8 +56,9 @@ function ToggleRow({
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: colors.primary, false: colors.border }}
+        trackColor={{ true: colors.primary, false: colors.borderStrong }}
         accessibilityLabel={label}
+        accessibilityState={{ checked: value }}
       />
     </View>
   );
@@ -89,7 +90,7 @@ export default function SettingsTab() {
       );
       setUpdateReady(true);
     } else if (result.status === 'up-to-date') {
-      setUpdateStatus(`최신 버전을 사용 중이에요 (v${result.current}) ✓`);
+      setUpdateStatus(`최신 버전을 사용 중이에요 (v${result.current})`);
     } else {
       setUpdateStatus('업데이트 서버에 연결할 수 없어요. 네트워크를 확인하거나 나중에 다시 시도해 주세요.');
     }
@@ -163,7 +164,8 @@ export default function SettingsTab() {
           <Button
             small
             variant="secondary"
-            label={exportCopied ? '복사됨 ✓ (메모장에 붙여넣어 보관하세요)' : '📦 데이터 내보내기 (JSON 복사)'}
+            icon={exportCopied ? 'check' : 'download'}
+            label={exportCopied ? '복사됨 (메모장에 붙여넣어 보관하세요)' : '데이터 내보내기 (JSON 복사)'}
             onPress={exportData}
           />
           <Button
@@ -196,8 +198,8 @@ export default function SettingsTab() {
           <OptionGroup
             title="학습 언어"
             options={[
-              { value: 'en', label: '🇺🇸 영어' },
-              { value: 'ja', label: '🇯🇵 일본어' },
+              { value: 'en', label: '영어' },
+              { value: 'ja', label: '일본어' },
             ]}
             value={settings.learning.language}
             onChange={(language) => settings.updateLearning({ language })}
@@ -295,7 +297,7 @@ export default function SettingsTab() {
           <OptionGroup
             title="기본 공개 범위"
             options={[
-              { value: 'private', label: '🔒 나만 보기', description: '기본값이에요. 공유는 일기별로 직접 선택해요.' },
+              { value: 'private', label: '나만 보기', description: '기본값이에요. 공유는 일기별로 직접 선택해요.' },
               { value: 'selected-friends', label: '선택한 친구' },
             ]}
             value={settings.diary.defaultVisibility === 'private' ? 'private' : 'selected-friends'}
@@ -306,7 +308,7 @@ export default function SettingsTab() {
             value={settings.diary.showKoreanTranslation}
             onChange={(showKoreanTranslation) => settings.updateDiary({ showKoreanTranslation })}
           />
-          <Button small variant="secondary" label="🗑 휴지통 보기" onPress={() => router.push('/trash')} />
+          <Button small variant="secondary" icon="trash-2" label="휴지통 보기" onPress={() => router.push('/trash')} />
         </Card>
 
         {/* 디자인 */}
@@ -372,7 +374,8 @@ export default function SettingsTab() {
           <Button
             small
             variant="secondary"
-            label={checkingUpdate ? '확인 중…' : '🔄 업데이트 확인'}
+            icon="refresh-cw"
+            label={checkingUpdate ? '확인 중…' : '업데이트 확인'}
             loading={checkingUpdate}
             onPress={runUpdateCheck}
           />
@@ -384,15 +387,15 @@ export default function SettingsTab() {
           {updateReady ? (
             <Button small label="지금 업데이트" onPress={() => applyWebUpdate()} />
           ) : null}
-          <Button small variant="secondary" label="💌 의견 보내기" onPress={sendFeedback} />
-          <Button small variant="secondary" label="ℹ️ 앱 정보 및 버전" onPress={() => router.push('/about')} />
+          <Button small variant="secondary" icon="mail" label="의견 보내기" onPress={sendFeedback} />
+          <Button small variant="secondary" icon="info" label="앱 정보 및 버전" onPress={() => router.push('/about')} />
         </Card>
 
         {/* 개발자/관리자 */}
         <SectionTitle>개발 설정</SectionTitle>
         <Card style={{ gap: spacing.md }}>
           <AppText variant="bodySmall" color="secondary">
-            환경: {getAppEnv()} · AI Provider: {isMockAI() ? 'Mock AI 🧪' : 'Anthropic (서버 경유)'} ·
+            환경: {getAppEnv()} · AI Provider: {isMockAI() ? 'Mock AI' : 'Anthropic (서버 경유)'} ·
             Supabase: {isSupabaseConfigured() ? '연결됨' : '미연결'}
           </AppText>
           <AppText variant="caption" color="secondary">

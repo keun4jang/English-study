@@ -26,7 +26,7 @@ export default function DiaryEdit() {
   if (!entry) {
     return (
       <Screen>
-        <EmptyState emoji="🍂" title="일기를 찾을 수 없어요" actionLabel="돌아가기" onAction={() => router.back()} />
+        <EmptyState icon="file-text" title="일기를 찾을 수 없어요" actionLabel="돌아가기" onAction={() => router.back()} />
       </Screen>
     );
   }

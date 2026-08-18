@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 
-import { CorrectionResult, LearningLanguage } from '@/domain/types';
-import { speak } from '@/speech/tts';
-import { spacing } from '@/theme/tokens';
-import { useTheme } from '@/theme/useTheme';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { CorrectionResult, LearningLanguage } from '@/domain/types';
+import { speak } from '@/speech/tts';
+import { radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 interface CorrectionCardProps {
   correction: CorrectionResult;
@@ -21,8 +22,8 @@ interface CorrectionCardProps {
 }
 
 /**
- * 교정 카드 — 비난 없이 짧고 친절하게.
- * "내가 말한 문장 / 자연스러운 문장 / 설명 / 핵심 표현" 구조.
+ * 교정 카드 — 비난 없이 짧고 친절하게. 정보 밀도를 낮추고
+ * 설명은 접어두며, 부가 액션은 더보기로 정리한다.
  */
 export function CorrectionCard({
   correction,
@@ -35,26 +36,30 @@ export function CorrectionCard({
   savedExpressions,
 }: CorrectionCardProps) {
   const { colors } = useTheme();
-  const isMinor = correction.severity === 'minor';
+  const [explanationOpen, setExplanationOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   return (
-    <Card soft style={{ gap: spacing.md }}>
-      <AppText variant="bodySmall" weight="700" color="accent">
-        {isMinor ? '💡 조금 더 자연스럽게' : '✏️ 이렇게 말하면 자연스러워요'}
-      </AppText>
+    <Card style={{ gap: spacing.lg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <AppIcon name="edit-2" size={16} color="accent" />
+        <AppText variant="label" color="accent">
+          조금 더 자연스럽게
+        </AppText>
+      </View>
 
       <View style={{ gap: spacing.xs }}>
         <AppText variant="caption" color="secondary">
-          내가 말한 문장
+          내 문장
         </AppText>
         <AppText variant="body">{correction.original}</AppText>
       </View>
 
       <View style={{ gap: spacing.xs }}>
         <AppText variant="caption" color="secondary">
-          자연스러운 문장
+          자연스러운 표현
         </AppText>
-        <AppText variant="body" weight="600" style={{ color: colors.primary }}>
+        <AppText variant="correctionSentence" color="accent">
           {correction.corrected}
         </AppText>
         {correction.readingJa ? (
@@ -64,26 +69,81 @@ export function CorrectionCard({
         ) : null}
       </View>
 
+      {correction.changedParts.length > 0 ? (
+        <View style={{ gap: spacing.xs }}>
+          {correction.changedParts.map((part, i) => (
+            <View
+              key={`${part.from}-${i}`}
+              accessibilityLabel={`바뀐 표현: ${part.from}에서 ${part.to}로, 이유: ${part.reasonKo}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}
+            >
+              <AppIcon name="minus-circle" size={13} color="secondary" />
+              <AppText
+                variant="bodySmall"
+                color="secondary"
+                style={{ textDecorationLine: 'line-through' }}
+              >
+                {part.from}
+              </AppText>
+              <AppIcon name="arrow-right" size={13} color="secondary" />
+              <AppIcon name="plus-circle" size={13} color="success" />
+              <AppText
+                variant="bodySmall"
+                weight="600"
+                style={{ textDecorationLine: 'underline' }}
+              >
+                {part.to}
+              </AppText>
+              <AppText variant="caption" color="secondary">
+                ({part.reasonKo})
+              </AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {correction.explanationKo ? (
-        <AppText variant="bodySmall" color="secondary">
-          {correction.explanationKo}
-        </AppText>
+        <View style={{ gap: spacing.sm }}>
+          {explanationOpen ? (
+            <View
+              style={{
+                backgroundColor: colors.surfaceSoft,
+                borderRadius: radius.md,
+                padding: spacing.lg,
+              }}
+            >
+              <AppText variant="bodySmall" color="secondary">
+                {correction.explanationKo}
+              </AppText>
+            </View>
+          ) : (
+            <AppText variant="bodySmall" color="secondary" numberOfLines={2}>
+              {correction.explanationKo}
+            </AppText>
+          )}
+          <Button
+            size="compact"
+            variant="ghost"
+            icon={explanationOpen ? 'chevron-up' : 'help-circle'}
+            label={explanationOpen ? '설명 접기' : '왜 이렇게 말해요?'}
+            onPress={() => setExplanationOpen((v) => !v)}
+          />
+        </View>
       ) : null}
 
       {correction.keyExpressions.length > 0 ? (
         <View style={{ gap: spacing.sm }}>
-          <AppText variant="caption" color="secondary">
-            핵심 표현
-          </AppText>
           {correction.keyExpressions.map((k) => {
             const saved = savedExpressions.has(k.expression);
             return (
               <View
                 key={k.expression}
                 style={{
+                  backgroundColor: colors.surfaceSoft,
+                  borderRadius: radius.md,
+                  padding: spacing.md,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
                   gap: spacing.sm,
                 }}
               >
@@ -96,9 +156,10 @@ export function CorrectionCard({
                   </AppText>
                 </View>
                 <Button
-                  small
-                  variant="secondary"
-                  label={saved ? '저장됨 ✓' : '단어장 저장'}
+                  size="compact"
+                  variant="ghost"
+                  icon={saved ? 'check' : 'bookmark'}
+                  label={saved ? '저장됨' : '저장'}
                   disabled={saved}
                   onPress={() => onSaveExpression(k)}
                 />
@@ -108,18 +169,40 @@ export function CorrectionCard({
         </View>
       ) : null}
 
+      {/* 주요 액션 2개 + 더보기 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        <Button small label="다시 말하기" onPress={onSpeakAgain} />
+        <Button size="compact" icon="mic" label="다시 말해 보기" onPress={onSpeakAgain} />
         <Button
-          small
+          size="compact"
           variant="secondary"
+          icon="volume-1"
           label="천천히 듣기"
           onPress={() => speak(correction.corrected, { language, extraSlow: true })}
         />
-        <Button small variant="secondary" label="교정문 적용" onPress={onApplyCorrection} />
-        <Button small variant="ghost" label="원문 유지" onPress={onKeepOriginal} />
-        <Button small variant="ghost" label="그냥 계속하기" onPress={onContinue} />
+        <Button
+          size="compact"
+          variant="ghost"
+          icon="more-horizontal"
+          label="더보기"
+          onPress={() => setMoreOpen((v) => !v)}
+          accessibilityHint="듣기, 적용 등 추가 동작 보기"
+        />
       </View>
+
+      {moreOpen ? (
+        <View style={{ gap: spacing.sm }}>
+          <Button
+            size="compact"
+            variant="ghost"
+            icon="volume-2"
+            label="보통 속도로 듣기"
+            onPress={() => speak(correction.corrected, { language })}
+          />
+          <Button size="compact" variant="ghost" icon="check" label="교정문 적용" onPress={onApplyCorrection} />
+          <Button size="compact" variant="ghost" icon="corner-up-left" label="원문 유지" onPress={onKeepOriginal} />
+          <Button size="compact" variant="ghost" icon="arrow-right" label="그냥 계속하기" onPress={onContinue} />
+        </View>
+      ) : null}
     </Card>
   );
 }

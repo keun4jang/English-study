@@ -9,6 +9,7 @@ import { speak, stopSpeaking } from '@/speech/tts';
 import { useSettings } from '@/state/useSettings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -132,52 +133,66 @@ export function SpeakPractice({
       <View
         style={{
           flex: 1,
-          backgroundColor: colors.overlay,
+          backgroundColor: colors.scrim,
           justifyContent: 'center',
           padding: spacing.lg,
         }}
       >
-        <Card style={{ gap: spacing.md, borderRadius: radius.xl }}>
+        <Card variant="raised" style={{ gap: spacing.md, borderRadius: radius.large }}>
           <AppText variant="subheading">이 문장을 따라 말해볼까요?</AppText>
-          <AppText variant="body" weight="600" style={{ color: colors.primary }}>
+          <AppText variant="correctionSentence" color="accent">
             {targetSentence}
           </AppText>
 
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <Button
-              small
+              size="compact"
               variant="secondary"
-              label="🔊 듣기"
+              icon="volume-2"
+              label="듣기"
               onPress={() => speak(targetSentence, { language, rate: speechRate })}
             />
             <Button
-              small
+              size="compact"
               variant="secondary"
-              label="🐢 천천히 듣기"
+              icon="volume-1"
+              label="천천히 듣기"
               onPress={() => speak(targetSentence, { language, extraSlow: true })}
             />
           </View>
 
           {phase === 'listening' ? (
             <View style={{ gap: spacing.sm, alignItems: 'center', paddingVertical: spacing.md }}>
-              <AppText variant="heading" accessibilityLabel="음성 인식 중">
-                🎙️
-              </AppText>
+              <View
+                accessibilityLabel="녹음 중"
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  borderWidth: 2,
+                  borderColor: colors.primary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AppIcon name="mic" size={24} color="accent" decorative={false} />
+              </View>
               <AppText variant="bodySmall" color="secondary">
-                듣고 있어요… 말이 끝나면 잠시 기다려 주세요
+                녹음 중 — 말이 끝나면 잠시 기다려 주세요
               </AppText>
               {interimText ? (
                 <AppText variant="bodySmall" align="center">
                   “{interimText}”
                 </AppText>
               ) : null}
-              <Button small variant="ghost" label="중지" onPress={() => getSttAdapter().stop()} />
+              <Button size="compact" variant="ghost" icon="square" label="중지" onPress={() => getSttAdapter().stop()} />
             </View>
           ) : null}
 
           {phase === 'success' ? (
             <View style={{ gap: spacing.sm, alignItems: 'center', paddingVertical: spacing.md }}>
-              <AppText variant="heading">🎉 성공!</AppText>
+              <AppIcon name="check-circle" size={28} color="success" decorative={false} />
+              <AppText variant="subheading">좋아요. 이 표현이면 자연스러워요.</AppText>
               <AppText variant="bodySmall" color="secondary" align="center">
                 인식된 문장: “{recognized}”
               </AppText>
@@ -193,7 +208,7 @@ export function SpeakPractice({
           {phase === 'retry' ? (
             <View style={{ gap: spacing.sm, alignItems: 'center', paddingVertical: spacing.md }}>
               <AppText variant="body" align="center">
-                거의 다 왔어요! 한 번만 더 천천히 말해볼까요? 🌱
+                잘 들었어요. 한 번만 더 천천히 말해볼까요?
               </AppText>
               <AppText variant="bodySmall" color="secondary" align="center">
                 인식된 문장: “{recognized}”
@@ -204,8 +219,15 @@ export function SpeakPractice({
                 </AppText>
               ) : null}
               {retriesLeft > 0 && sttSupported ? (
-                <Button label={`다시 말하기 (${retriesLeft}번 남음)`} onPress={startListening} />
-              ) : null}
+                <Button icon="mic" label={`다시 말하기 (${retriesLeft}번 남음)`} onPress={startListening} />
+              ) : (
+                <View style={{ gap: spacing.sm, alignItems: 'center' }}>
+                  <AppText variant="bodySmall" color="secondary" align="center">
+                    오늘은 여기까지도 충분해요. 이 문장은 단어장에서 다시 만날 수 있어요.
+                  </AppText>
+                  <Button icon="arrow-right" label="다음에 다시 연습하기" onPress={onSkip} />
+                </View>
+              )}
             </View>
           ) : null}
 
@@ -217,7 +239,7 @@ export function SpeakPractice({
                 </AppText>
               ) : null}
               {sttSupported ? (
-                <Button label="🎙️ 말하기 시작" onPress={startListening} />
+                <Button icon="mic" label="말하기 시작" onPress={startListening} />
               ) : (
                 <View style={{ gap: spacing.sm }}>
                   <AppText variant="bodySmall" color="secondary">
@@ -241,8 +263,8 @@ export function SpeakPractice({
           ) : null}
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Button small variant="ghost" label="건너뛰기" onPress={onSkip} />
-            <Button small variant="ghost" label="닫기" onPress={onClose} />
+            <Button size="compact" variant="ghost" label="건너뛰기" onPress={onSkip} />
+            <Button size="compact" variant="ghost" label="닫기" onPress={onClose} />
           </View>
         </Card>
       </View>

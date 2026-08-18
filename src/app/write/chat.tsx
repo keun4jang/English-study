@@ -1,6 +1,6 @@
 import { router, useNavigation } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, View } from 'react-native';
+import { Modal, ScrollView, View } from 'react-native';
 
 import { getAIProvider, isMockAI } from '@/ai';
 import { ChatBubble } from '@/components/diary/ChatBubble';
@@ -9,6 +9,8 @@ import { SpeakPractice } from '@/components/diary/SpeakPractice';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { IconButton } from '@/components/ui/IconButton';
+import { InkLoading } from '@/components/ui/InkLoading';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { CorrectionResult } from '@/domain/types';
@@ -59,21 +61,21 @@ export default function ChatScreen() {
     [allMessages, conversationId],
   );
 
-  // 대화 시작: 오늘 진행 중인 대화가 있으면 이어서, 없으면 새로 시작 + 첫 인사
+  // 대화 시작: 진행 중인 대화가 있으면 이어서(어제 것 포함 — "보관" 약속 준수), 없으면 새로 시작
   useEffect(() => {
     if (!user || conversationId) return;
     const timer = setTimeout(() => {
-      const state = useChat.getState();
-      const today = todayKey();
-      const resumable = state.conversations.find(
-        (c) =>
-          c.status === 'active' &&
-          c.localDate === today &&
-          c.language === learning.language &&
-          state.messages.some((m) => m.conversationId === c.id),
-      );
+      // 사용자 발화가 없는 빈 대화(인사만 남은 것)는 정리해 누적을 막는다
+      chat.pruneEmptyConversations();
+      const resumable = useChat
+        .getState()
+        .conversations.find(
+          (c) =>
+            c.status === 'active' &&
+            useChat.getState().messages.some((m) => m.conversationId === c.id && m.role === 'user'),
+        );
       if (resumable) {
-        // 뒤로 나갔다 돌아와도 대화가 사라지지 않고 이어진다
+        // 뒤로 나갔다 돌아와도(자정이 지나도) 대화가 사라지지 않고 이어진다
         setConversationId(resumable.id);
         return;
       }
@@ -134,8 +136,14 @@ export default function ChatScreen() {
     [expressions.expressions],
   );
 
+  // 재개된 대화는 그 대화의 언어를 따른다 (설정 언어와 달라도 일관되게)
+  const chatLanguage = conversation?.language ?? learning.language;
+
   const limits = getUsageLimits();
-  const todayUsage = usage.getToday();
+  // 렌더 중 스토어 변경 방지: 표시용은 읽기만 (실제 차감/리셋은 이벤트 핸들러의 getToday)
+  const storedUsage = useUsage((s) => s.usage);
+  const todayUsage =
+    storedUsage.date === todayKey() ? storedUsage : { ...storedUsage, aiTurns: 0, diaryGenerations: 0 };
   const turnsLeft = Math.max(0, limits.dailyAiTurns - todayUsage.aiTurns);
 
   const send = async (text: string) => {
@@ -170,7 +178,7 @@ export default function ChatScreen() {
         .slice(-8)
         .map((m) => ({ role: m.role, text: m.text }));
       const response = await provider.evaluateAndReply(trimmed, {
-        language: learning.language,
+        language: chatLanguage,
         level: learning.level,
         intensity: learning.correctionIntensity,
         recentMessages,
@@ -201,7 +209,7 @@ export default function ChatScreen() {
 
       if (voice.autoPlayAiReply) {
         speak(response.assistant.replyTargetLanguage, {
-          language: learning.language,
+          language: chatLanguage,
           rate: voice.speechRate,
         });
       }
@@ -210,7 +218,7 @@ export default function ChatScreen() {
         conversationId,
         role: 'assistant',
         text:
-          learning.language === 'en'
+          chatLanguage === 'en'
             ? "Sorry, I couldn't respond just now. Let's keep going!"
             : 'すみません、うまく答えられませんでした。続けましょう！',
         translationKo: '잠시 응답하지 못했어요. 계속 이야기해 주세요! (내용은 안전하게 저장돼요)',
@@ -223,7 +231,7 @@ export default function ChatScreen() {
 
   const startVoiceInput = () => {
     setListening(true);
-    getSttAdapter().start(learning.language, {
+    getSttAdapter().start(chatLanguage, {
       onResult: (result) => {
         setInput(result.text);
         if (result.isFinal) {
@@ -269,17 +277,18 @@ export default function ChatScreen() {
         return { role: m.role, text: m.text, correctedText };
       });
       const result = await provider.createFinalDiary({
-        language: learning.language,
+        language: chatLanguage,
         level: learning.level,
         messages: messagesWithCorrections,
         requestId: newId(),
       });
       usage.recordDiaryGeneration();
-      chat.finishConversation(conversationId);
+      // 대화는 여기서 잠그지 않는다 — 저장 완료 시(finalize) finished 처리.
+      // 저장 없이 돌아오면 대화를 이어가거나 다시 완성할 수 있다.
       finalize.setResult({
         result,
         conversationId,
-        language: learning.language,
+        language: chatLanguage,
         originalText: userSentences.map((m) => m.text).join(' '),
       });
       router.push('/write/finalize');
@@ -293,19 +302,11 @@ export default function ChatScreen() {
   return (
     <Screen scroll={false} padded={false}>
       <View style={{ flex: 1 }}>
-        {isMockAI() ? (
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-            <AppText variant="caption" color="secondary">
-              🧪 Mock AI 모드 · 오늘 남은 대화 {turnsLeft}턴
-            </AppText>
-          </View>
-        ) : (
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-            <AppText variant="caption" color="secondary">
-              오늘 남은 대화 {turnsLeft}턴
-            </AppText>
-          </View>
-        )}
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+          <AppText variant="caption" color="secondary">
+            {isMockAI() ? 'Mock AI 모드 · ' : ''}오늘 남은 대화 {turnsLeft}턴
+          </AppText>
+        </View>
 
         <ScrollView
           ref={scrollRef}
@@ -317,7 +318,7 @@ export default function ChatScreen() {
             <ChatBubble
               key={m.id}
               message={m}
-              language={learning.language}
+              language={chatLanguage}
               speechRate={voice.speechRate}
               showTranslation={showTranslation}
             />
@@ -326,7 +327,7 @@ export default function ChatScreen() {
           {pendingCorrection ? (
             <CorrectionCard
               correction={pendingCorrection.correction}
-              language={learning.language}
+              language={chatLanguage}
               savedExpressions={savedExpressionSet}
               onSpeakAgain={() => setPracticeTarget(pendingCorrection.correction.corrected)}
               onKeepOriginal={() => setPendingCorrection(null)}
@@ -346,19 +347,20 @@ export default function ChatScreen() {
                   expression: k.expression,
                   meaningKo: k.meaningKo,
                   example: k.example,
-                  language: learning.language,
+                  language: chatLanguage,
                 });
               }}
             />
           ) : null}
 
           {sending ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <ActivityIndicator />
-              <AppText variant="caption" color="secondary">
-                AI 친구가 생각하고 있어요…
-              </AppText>
-            </View>
+            <InkLoading
+              message="이야기를 잘 듣고 있어요"
+              slowMessage="더 자연스러운 표현을 생각하고 있어요"
+            />
+          ) : null}
+          {finishing ? (
+            <InkLoading message="오늘의 이야기를 한 장에 담고 있어요" />
           ) : null}
 
           {limitMessage ? (
@@ -381,8 +383,8 @@ export default function ChatScreen() {
               <TextField
                 placeholder={
                   listening
-                    ? '🎙️ 듣고 있어요…'
-                    : learning.language === 'en'
+                    ? '듣고 있어요…'
+                    : chatLanguage === 'en'
                       ? '오늘 있었던 일을 영어로 말해보세요'
                       : '今日のことを日本語で書いてみましょう'
                 }
@@ -391,32 +393,48 @@ export default function ChatScreen() {
                 multiline
                 autoCapitalize="none"
                 editable={!sending}
+                style={{ maxHeight: 120 }}
               />
             </View>
             {sttSupported ? (
-              <Button
-                small
+              <IconButton
+                icon={listening ? 'square' : 'mic'}
                 variant={listening ? 'primary' : 'secondary'}
-                label={listening ? '⏹' : '🎙️'}
+                accessibilityLabel={listening ? '음성 입력 중지' : '음성으로 입력하기'}
                 onPress={listening ? () => getSttAdapter().stop() : startVoiceInput}
-                accessibilityHint="음성으로 입력하기"
               />
             ) : null}
-            <Button small label="보내기" onPress={() => send(input)} disabled={!input.trim() || sending} />
+            <IconButton
+              icon="send"
+              variant="primary"
+              accessibilityLabel="메시지 보내기"
+              onPress={() => send(input)}
+              disabled={!input.trim() || sending}
+            />
           </View>
           <Button
             variant="secondary"
-            label={finishing ? '일기를 만들고 있어요…' : '💌 대화 마치고 일기 만들기'}
+            icon="mail"
+            label={finishing ? '일기를 만들고 있어요…' : '대화 마치고 일기 만들기'}
             loading={finishing}
             onPress={finishAndCreateDiary}
           />
+          {finalize.result && finalize.conversationId === conversationId ? (
+            <Button
+              size="compact"
+              variant="ghost"
+              icon="file-text"
+              label="만들어 둔 일기 완성 화면으로 돌아가기"
+              onPress={() => router.push('/write/finalize')}
+            />
+          ) : null}
         </View>
       </View>
 
       <SpeakPractice
         visible={practiceTarget !== null}
         targetSentence={practiceTarget ?? ''}
-        language={learning.language}
+        language={chatLanguage}
         speechRate={voice.speechRate}
         onSuccess={() => {
           // 다시 말하기 성공 → 교정문을 내 메시지에 반영
@@ -459,7 +477,8 @@ export default function ChatScreen() {
             </AppText>
             <View style={{ gap: spacing.sm }}>
               <Button
-                label="💌 일기 만들고 저장하기"
+                icon="mail"
+                label="일기 만들고 저장하기"
                 onPress={() => {
                   setExitAction(null);
                   finishAndCreateDiary();

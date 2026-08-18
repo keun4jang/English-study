@@ -20,13 +20,14 @@ interface ChatState {
   /** "교정문 적용" 시 사용자 메시지 텍스트를 교정문으로 교체 */
   updateMessageText: (id: string, text: string) => void;
   finishConversation: (id: string) => void;
-  messagesFor: (conversationId: string) => ChatMessage[];
+  /** 사용자 발화가 없는 빈 active 대화 정리 (인사만 남은 대화의 무한 누적 방지) */
+  pruneEmptyConversations: () => void;
   wipeAll: () => void;
 }
 
 export const useChat = create<ChatState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       conversations: [],
       messages: [],
       startConversation: (ownerId, language) => {
@@ -64,8 +65,23 @@ export const useChat = create<ChatState>()(
             c.id === id ? { ...c, status: 'finished' as const } : c,
           ),
         })),
-      messagesFor: (conversationId) =>
-        get().messages.filter((m) => m.conversationId === conversationId),
+      pruneEmptyConversations: () =>
+        set((s) => {
+          const emptyIds = new Set(
+            s.conversations
+              .filter(
+                (c) =>
+                  c.status === 'active' &&
+                  !s.messages.some((m) => m.conversationId === c.id && m.role === 'user'),
+              )
+              .map((c) => c.id),
+          );
+          if (emptyIds.size === 0) return s;
+          return {
+            conversations: s.conversations.filter((c) => !emptyIds.has(c.id)),
+            messages: s.messages.filter((m) => !emptyIds.has(m.conversationId)),
+          };
+        }),
       wipeAll: () => set({ conversations: [], messages: [] }),
     }),
     { name: 'mellow-chat', storage: persistStorage },

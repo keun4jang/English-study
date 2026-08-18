@@ -455,7 +455,7 @@ export class MockAIProvider implements AIProvider {
       keyExpressions: [],
       commonMistakes: [],
       practiceSentences,
-      encouragementKo: '오늘도 외국어로 하루를 기록했어요. 그것만으로 충분히 멋져요! 🌷',
+      encouragementKo: '오늘도 외국어로 하루를 기록했어요. 그것만으로 충분히 멋져요.',
     };
   }
 

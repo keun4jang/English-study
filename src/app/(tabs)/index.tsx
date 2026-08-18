@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import React, { useMemo } from 'react';
-import { View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { AccessibilityInfo, Animated, View } from 'react-native';
 
-import { DiaryCard } from '@/components/diary/DiaryCard';
+import { DiaryRow } from '@/components/diary/DiaryRow';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -35,57 +36,71 @@ export default function TodayHome() {
   const draft = useDiary((s) => s.draft);
   const expressions = useExpressions((s) => s.expressions);
   const language = useSettings((s) => s.learning.language);
+  const reduceMotion = useSettings((s) => s.design.reduceMotion);
 
   const conversations = useChat((s) => s.conversations);
   const chatMessages = useChat((s) => s.messages);
 
   const today = todayKey();
   const todayEntries = useMemo(() => selectEntriesByDate(entries, today), [entries, today]);
-  // 진행 중인 AI 대화 (뒤로 나갔어도 이어서 할 수 있게)
+  // 진행 중인 AI 대화 — 자정이 지나도 사라지지 않고 이어서 할 수 있다
   const activeConversation = useMemo(
     () =>
       conversations.find(
         (c) =>
           c.status === 'active' &&
-          c.localDate === today &&
           chatMessages.some((m) => m.conversationId === c.id && m.role === 'user'),
       ) ?? null,
-    [conversations, chatMessages, today],
+    [conversations, chatMessages],
   );
-  const activeConversationPreview = useMemo(() => {
-    if (!activeConversation) return '';
-    const lastUser = [...chatMessages]
-      .reverse()
-      .find((m) => m.conversationId === activeConversation.id && m.role === 'user');
-    return lastUser?.text ?? '';
-  }, [activeConversation, chatMessages]);
+
   const active = useMemo(() => selectActiveEntries(entries), [entries]);
-  const streak = useMemo(
-    () => calcStreak(active.map((e) => e.localDate), today),
-    [active, today],
-  );
-  // 오늘의 질문: 날짜 기반으로 선택 (매일 다른 질문)
-  const promptIndex = Math.abs(diffDays(today, '2026-01-01')) % DAILY_PROMPTS.length;
+  const streak = useMemo(() => calcStreak(active.map((e) => e.localDate), today), [active, today]);
   const reviewDue = expressions.filter((e) => e.nextReviewDate <= today).length;
+
+  // 오늘의 질문: 날짜 기반 기본 + "다른 질문 보기"로 교체 (150ms fade, Reduce Motion 시 즉시)
+  const baseIndex = Math.abs(diffDays(today, '2026-01-01')) % DAILY_PROMPTS.length;
+  const [promptOffset, setPromptOffset] = useState(0);
+  const [promptOpacity] = useState(() => new Animated.Value(1));
+  const promptIndex = (baseIndex + promptOffset) % DAILY_PROMPTS.length;
+
+  const nextPrompt = () => {
+    const advance = () => setPromptOffset((o) => o + 1);
+    AccessibilityInfo.isReduceMotionEnabled().then((sysReduce) => {
+      if (reduceMotion || sysReduce) {
+        advance();
+        return;
+      }
+      Animated.timing(promptOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start(
+        () => {
+          advance();
+          Animated.timing(promptOpacity, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }).start();
+        },
+      );
+    });
+  };
 
   return (
     <Screen>
-      <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.x20 }}>
+        {/* 배경 위 인사말 — 카드로 감싸지 않는다 */}
         <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" color="secondary">
             {formatDateKo(today)}
           </AppText>
-          <AppText variant="title">
-            {user?.nickname ?? '친구'}님, 안녕하세요 🌷
-          </AppText>
+          <AppText variant="display">{user?.nickname ?? '친구'}님, 안녕하세요</AppText>
           {streak > 0 ? (
             <AppText variant="bodySmall" color="secondary">
-              🔥 {streak}일째 이어서 기록하고 있어요
+              {streak}일째 이어서 기록하고 있어요
             </AppText>
           ) : null}
           {isMockAI() ? (
             <AppText variant="caption" color="secondary">
-              🧪 Mock AI 모드 — 실제 AI 연결 전 체험용 응답이에요
+              Mock AI 모드 — 실제 AI 연결 전 체험용 응답이에요
             </AppText>
           ) : null}
         </View>
@@ -94,84 +109,130 @@ export default function TodayHome() {
 
         {activeConversation ? (
           <Card style={{ gap: spacing.sm }}>
-            <AppText variant="bodySmall" weight="600">
-              💬 진행 중인 AI 대화가 있어요
-            </AppText>
-            {activeConversationPreview ? (
-              <AppText variant="bodySmall" color="secondary" numberOfLines={1}>
-                마지막 이야기: “{activeConversationPreview}”
-              </AppText>
-            ) : null}
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <Button small label="이어서 이야기하기" onPress={() => router.push('/write/chat')} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <AppIcon name="message-circle" size={18} color="accent" />
+              <AppText variant="label">진행 중인 AI 대화가 있어요</AppText>
             </View>
+            <Button
+              size="compact"
+              label="이어서 이야기하기"
+              onPress={() => router.push('/write/chat')}
+            />
           </Card>
         ) : null}
 
-        <Card soft style={{ gap: spacing.md }}>
-          <AppText variant="caption" color="secondary">
-            오늘의 질문
+        {/* 오늘의 편지 — 대표 카드 (raised) */}
+        <Card variant="raised" style={{ gap: spacing.lg }}>
+          <AppText variant="label" color="accent">
+            오늘의 편지
           </AppText>
-          <AppText variant="subheading">{DAILY_PROMPTS[promptIndex]}</AppText>
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Animated.View style={{ opacity: promptOpacity }}>
+            <AppText style={{ fontSize: 21, lineHeight: 30, fontWeight: '500' }}>
+              {DAILY_PROMPTS[promptIndex]}
+            </AppText>
+          </Animated.View>
+          <View style={{ gap: spacing.sm }}>
             <Button
-              small
-              label={`✨ ${language === 'en' ? '영어' : '일본어'}로 이야기하기`}
+              label={`이 질문으로 시작하기 (${language === 'en' ? '영어' : '일본어'})`}
+              icon="message-circle"
               onPress={() => router.push('/write/chat')}
             />
-            <Button small variant="secondary" label="직접 쓰기" onPress={() => router.push('/write/text')} />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button size="compact" variant="ghost" label="다른 질문 보기" onPress={nextPrompt} />
+              <Button
+                size="compact"
+                variant="ghost"
+                label="직접 쓰기"
+                onPress={() => router.push('/write/text')}
+              />
+            </View>
           </View>
         </Card>
 
         {draft ? (
           <Card style={{ gap: spacing.sm }}>
-            <AppText variant="bodySmall" weight="600">
-              📝 작성 중인 일기가 있어요
-            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <AppIcon name="edit-3" size={18} color="accent" />
+              <AppText variant="label">작성 중인 일기가 있어요</AppText>
+            </View>
             <AppText variant="bodySmall" color="secondary" numberOfLines={2}>
               {draft.text || '(내용 없음)'}
             </AppText>
-            <Button small variant="secondary" label="이어서 쓰기" onPress={() => router.push('/write/text')} />
+            <Button
+              size="compact"
+              variant="secondary"
+              label="이어서 쓰기"
+              onPress={() => router.push('/write/text')}
+            />
           </Card>
         ) : null}
 
         {reviewDue > 0 ? (
           <Card style={{ gap: spacing.sm }}>
-            <AppText variant="bodySmall" weight="600">
-              📚 복습할 표현이 {reviewDue}개 있어요
-            </AppText>
-            <Button small variant="secondary" label="단어장 열기" onPress={() => router.push('/expressions')} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <AppIcon name="book-open" size={18} color="accent" />
+              <AppText variant="label">복습할 표현이 {reviewDue}개 있어요</AppText>
+            </View>
+            <Button
+              size="compact"
+              variant="secondary"
+              label="단어장 열기"
+              onPress={() => router.push('/expressions')}
+            />
           </Card>
         ) : null}
 
+        {/* 오늘의 일기 — 카드 하나 안의 리스트 */}
         <View style={{ gap: spacing.md }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+          >
             <AppText variant="heading">오늘의 일기</AppText>
-            <Button small variant="ghost" label="🔍 검색" onPress={() => router.push('/search')} />
+            <Button
+              size="compact"
+              variant="ghost"
+              icon="search"
+              label="검색"
+              onPress={() => router.push('/search')}
+            />
           </View>
           {todayEntries.length === 0 ? (
             <EmptyState
-              emoji="🍃"
-              title="아직 오늘의 일기가 없어요"
-              description="짧은 한 문장도 좋아요. 편하게 시작해 볼까요?"
-              actionLabel="일기 쓰러 가기"
-              onAction={() => router.push('/(tabs)/write')}
+              icon="feather"
+              title="아직 적지 않은 하루예요."
+              description={'거창하지 않아도 괜찮아요.\n오늘 기억나는 장면 하나만 들려주세요.'}
+              actionLabel="AI 친구에게 이야기하기"
+              onAction={() => router.push('/write/chat')}
             />
           ) : (
-            todayEntries.map((entry) => (
-              <DiaryCard
-                key={entry.id}
-                entry={entry}
-                showDate={false}
-                onPress={() => router.push({ pathname: '/diary/[id]', params: { id: entry.id } })}
-              />
-            ))
+            <Card style={{ paddingVertical: spacing.xs }}>
+              {todayEntries.map((entry, i) => (
+                <DiaryRow
+                  key={entry.id}
+                  entry={entry}
+                  showDivider={i < todayEntries.length - 1}
+                  onPress={() => router.push({ pathname: '/diary/[id]', params: { id: entry.id } })}
+                />
+              ))}
+            </Card>
           )}
         </View>
 
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <Button small variant="ghost" label="📊 학습 통계" onPress={() => router.push('/stats')} />
-          <Button small variant="ghost" label="📚 단어장" onPress={() => router.push('/expressions')} />
+          <Button
+            size="compact"
+            variant="ghost"
+            icon="bar-chart-2"
+            label="학습 통계"
+            onPress={() => router.push('/stats')}
+          />
+          <Button
+            size="compact"
+            variant="ghost"
+            icon="book-open"
+            label="단어장"
+            onPress={() => router.push('/expressions')}
+          />
         </View>
       </View>
       <VersionFooter />

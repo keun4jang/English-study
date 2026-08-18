@@ -23,7 +23,7 @@ export default function TrashScreen() {
           휴지통의 일기는 {retentionDays}일 후 자동으로 삭제돼요.
         </AppText>
         {trashed.length === 0 ? (
-          <EmptyState emoji="🗑" title="휴지통이 비어 있어요" />
+          <EmptyState icon="trash-2" title="휴지통이 비어 있어요" />
         ) : (
           trashed.map((entry) => (
             <Card key={entry.id} style={{ gap: spacing.sm }}>

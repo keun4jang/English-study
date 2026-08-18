@@ -38,7 +38,8 @@ export default function FriendsTab() {
           <Button
             small
             variant="secondary"
-            label={copied ? '복사됨 ✓' : '코드 복사하기'}
+            icon={copied ? 'check' : 'copy'}
+            label={copied ? '복사됨' : '코드 복사하기'}
             onPress={copyCode}
           />
           <AppText variant="caption" color="secondary" align="center">
@@ -47,7 +48,7 @@ export default function FriendsTab() {
         </Card>
 
         <EmptyState
-          emoji="💌"
+          icon="users"
           title="친구 기능은 준비 중이에요"
           description={
             '친구 요청, 일기 공유, 공감과 댓글은 온라인 계정(Supabase) 연결 후 사용할 수 있어요.\n지금은 Demo 모드라 이 기기에만 일기가 저장돼요.\n\n공유는 언제나 내가 선택한 일기만, 내가 선택한 친구에게만 이루어져요.'

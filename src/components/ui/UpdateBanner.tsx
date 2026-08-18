@@ -45,7 +45,7 @@ export function UpdateBanner() {
   return (
     <Card soft style={{ gap: spacing.sm }}>
       <AppText variant="bodySmall" weight="700" color="accent">
-        🔄 새 버전 v{result.latest.version}이(가) 준비됐어요 — 업데이트가 필요해요!
+        새 버전 v{result.latest.version}이(가) 준비됐어요 — 업데이트가 필요해요!
       </AppText>
       {result.latest.noteKo ? (
         <AppText variant="caption" color="secondary">

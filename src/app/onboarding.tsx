@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -64,7 +65,7 @@ export default function Onboarding() {
 
         {step === 0 ? (
           <View style={{ gap: spacing.lg, alignItems: 'center', paddingVertical: spacing.xxl }}>
-            <AppText style={{ fontSize: 56, lineHeight: 68 }}>📖</AppText>
+            <AppIcon name="book-open" size={48} color="accent" />
             <AppText variant="title" align="center">
               {appConfig.appName}
             </AppText>
@@ -88,8 +89,8 @@ export default function Onboarding() {
             <OptionGroup
               title="배우고 싶은 언어"
               options={[
-                { value: 'en', label: '🇺🇸 영어', description: '기본 학습 언어예요. 나중에 변경할 수 있어요.' },
-                { value: 'ja', label: '🇯🇵 일본어' },
+                { value: 'en', label: '영어', description: '기본 학습 언어예요. 나중에 변경할 수 있어요.' },
+                { value: 'ja', label: '일본어' },
               ]}
               value={language}
               onChange={setLanguage}
@@ -162,7 +163,7 @@ export default function Onboarding() {
             />
             <Card soft>
               <AppText variant="caption" color="secondary">
-                🔒 일기는 기본으로 비공개예요. 음성 원본은 저장하지 않아요. 모든 설정은 나중에
+                일기는 기본으로 비공개예요. 음성 원본은 저장하지 않아요. 모든 설정은 나중에
                 바꿀 수 있어요.
               </AppText>
             </Card>

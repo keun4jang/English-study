@@ -2,14 +2,22 @@ import React from 'react';
 import { Text, TextProps, TextStyle } from 'react-native';
 
 import { useSettings } from '@/state/useSettings';
-import { typography } from '@/theme/tokens';
+import { typography, TypographyVariant } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
-type Variant = keyof typeof typography;
+type ColorName =
+  | 'primary'
+  | 'secondary'
+  | 'accent'
+  | 'onPrimary'
+  | 'inverse'
+  | 'error'
+  | 'success'
+  | 'warning';
 
 interface AppTextProps extends TextProps {
-  variant?: Variant;
-  color?: 'primary' | 'secondary' | 'accent' | 'onPrimary' | 'error' | 'success';
+  variant?: TypographyVariant;
+  color?: ColorName;
   weight?: TextStyle['fontWeight'];
   align?: TextStyle['textAlign'];
 }
@@ -28,13 +36,15 @@ export function AppText({
   const { colors } = useTheme();
   const fontScale = useSettings((s) => FONT_SCALE[s.design.fontScale]);
   const base = typography[variant];
-  const colorMap = {
+  const colorMap: Record<ColorName, string> = {
     primary: colors.textPrimary,
     secondary: colors.textSecondary,
     accent: colors.primary,
-    onPrimary: colors.textOnPrimary,
+    onPrimary: colors.onPrimary,
+    inverse: colors.textInverse,
     error: colors.error,
     success: colors.success,
+    warning: colors.warning,
   };
   return (
     <Text
@@ -45,6 +55,7 @@ export function AppText({
           fontSize: base.fontSize * fontScale,
           lineHeight: base.lineHeight * fontScale,
           fontWeight: weight ?? base.fontWeight,
+          fontFamily: base.fontFamily,
           color: colorMap[color],
           textAlign: align,
         },

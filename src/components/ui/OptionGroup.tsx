@@ -23,9 +23,7 @@ export function OptionGroup<T extends string>({ title, options, value, onChange 
   const selected = options.find((o) => o.value === value);
   return (
     <View style={{ gap: spacing.sm }}>
-      {title ? (
-        <AppText variant="subheading">{title}</AppText>
-      ) : null}
+      {title ? <AppText variant="label">{title}</AppText> : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {options.map((o) => (
           <Chip key={o.value} label={o.label} selected={o.value === value} onPress={() => onChange(o.value)} />

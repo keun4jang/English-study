@@ -6,8 +6,9 @@ import { View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { DiaryBodyText, DiaryPaper, DiaryTitleText } from '@/components/ui/DiaryPaper';
+import { EmotionIcon, emotionLabel } from '@/components/ui/EmotionPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { emotionEmoji } from '@/components/ui/EmotionPicker';
 import { Screen } from '@/components/ui/Screen';
 import { formatDateKo } from '@/lib/dates';
 import { speak, stopSpeaking } from '@/speech/tts';
@@ -21,13 +22,14 @@ export default function DiaryDetail() {
   const speechRate = useSettings((s) => s.voice.speechRate);
   const entry = useDiary((s) => s.entries.find((e) => e.id === id));
   const [showOriginal, setShowOriginal] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (!entry) {
     return (
       <Screen>
         <EmptyState
-          emoji="🍂"
+          icon="file-text"
           title="일기를 찾을 수 없어요"
           description="삭제되었거나 이동된 일기예요."
           actionLabel="돌아가기"
@@ -37,20 +39,19 @@ export default function DiaryDetail() {
     );
   }
 
-  const hasCorrectionDiff =
-    entry.correctedText && entry.correctedText !== entry.originalText;
+  const hasCorrectionDiff = entry.correctedText && entry.correctedText !== entry.originalText;
 
   return (
     <Screen>
-      <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.x20 }}>
         <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" color="secondary">
-            {formatDateKo(entry.localDate)} · {entry.language === 'en' ? '🇺🇸 영어' : '🇯🇵 일본어'}
+            {formatDateKo(entry.localDate)} · {entry.language === 'en' ? '영어' : '일본어'}
           </AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <AppText style={{ fontSize: 24, lineHeight: 32 }}>{emotionEmoji(entry.emotion)}</AppText>
-            <AppText variant="title" style={{ flex: 1 }}>
-              {entry.title || (entry.language === 'en' ? 'Untitled' : '無題')}
+            <EmotionIcon emotion={entry.emotion} size={22} />
+            <AppText variant="caption" color="secondary">
+              {emotionLabel(entry.emotion)}
             </AppText>
           </View>
         </View>
@@ -69,27 +70,94 @@ export default function DiaryDetail() {
           </View>
         ) : null}
 
-        <Card style={{ gap: spacing.md }}>
-          <AppText variant="body">{entry.finalText}</AppText>
-          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
-            <Button
-              small
-              variant="secondary"
-              label="🔊 듣기"
-              onPress={() => speak(entry.finalText, { language: entry.language, rate: speechRate })}
-            />
-            <Button
-              small
-              variant="secondary"
-              label="🐢 천천히"
-              onPress={() => speak(entry.finalText, { language: entry.language, extraSlow: true })}
-            />
-            <Button small variant="ghost" label="⏹ 중지" onPress={() => stopSpeaking()} />
+        {/* 완성된 종이 일기 */}
+        <DiaryPaper>
+          <View style={{ gap: spacing.md }}>
+            {entry.title ? <DiaryTitleText language={entry.language}>{entry.title}</DiaryTitleText> : null}
+            <DiaryBodyText language={entry.language}>{entry.finalText}</DiaryBodyText>
           </View>
-        </Card>
+        </DiaryPaper>
+
+        <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+          <Button
+            size="compact"
+            icon="volume-2"
+            label="보통 속도로 듣기"
+            onPress={() => speak(entry.finalText, { language: entry.language, rate: speechRate })}
+          />
+          <Button
+            size="compact"
+            variant="secondary"
+            icon="volume-1"
+            label="천천히 듣기"
+            onPress={() => speak(entry.finalText, { language: entry.language, extraSlow: true })}
+          />
+          <Button
+            size="compact"
+            variant="ghost"
+            icon="more-horizontal"
+            label="더보기"
+            onPress={() => setMoreOpen((v) => !v)}
+          />
+        </View>
+
+        {moreOpen ? (
+          <View style={{ gap: spacing.sm }}>
+            <Button
+              size="compact"
+              variant="ghost"
+              icon="square"
+              label="재생 중지"
+              onPress={() => stopSpeaking()}
+            />
+            <Button
+              size="compact"
+              variant="ghost"
+              icon={entry.isFavorite ? 'check' : 'bookmark'}
+              label={entry.isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}
+              onPress={() => diary.toggleFavorite(entry.id)}
+            />
+            <Button
+              size="compact"
+              variant="ghost"
+              icon="edit-3"
+              label="수정"
+              onPress={() => router.push({ pathname: '/diary/edit/[id]', params: { id: entry.id } })}
+            />
+            {!confirmDelete ? (
+              <Button
+                size="compact"
+                variant="ghost"
+                icon="trash-2"
+                label="휴지통으로 보내기"
+                onPress={() => setConfirmDelete(true)}
+              />
+            ) : (
+              <Card variant="soft" style={{ gap: spacing.sm }}>
+                <AppText variant="bodySmall" color="secondary">
+                  이 일기({entry.title || entry.localDate})가 휴지통으로 이동해요. 휴지통에서는
+                  복원할 수 있어요.
+                </AppText>
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <Button
+                    size="compact"
+                    variant="danger"
+                    icon="trash-2"
+                    label="휴지통으로 보내기"
+                    onPress={() => {
+                      diary.trashEntry(entry.id);
+                      router.back();
+                    }}
+                  />
+                  <Button size="compact" variant="ghost" label="취소" onPress={() => setConfirmDelete(false)} />
+                </View>
+              </Card>
+            )}
+          </View>
+        ) : null}
 
         {entry.translationKo ? (
-          <Card soft>
+          <Card variant="soft" style={{ gap: spacing.xs }}>
             <AppText variant="caption" color="secondary">
               한국어 뜻
             </AppText>
@@ -100,11 +168,12 @@ export default function DiaryDetail() {
         ) : null}
 
         {hasCorrectionDiff ? (
-          <Card soft style={{ gap: spacing.sm }}>
+          <Card variant="soft" style={{ gap: spacing.sm }}>
             <Button
-              small
+              size="compact"
               variant="ghost"
-              label={showOriginal ? '원문 접기 ▲' : '내가 쓴 원문 보기 ▼'}
+              icon={showOriginal ? 'chevron-up' : 'chevron-down'}
+              label={showOriginal ? '원문 접기' : '내가 쓴 원문 보기'}
               onPress={() => setShowOriginal((v) => !v)}
             />
             {showOriginal ? (
@@ -125,37 +194,9 @@ export default function DiaryDetail() {
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
-          <Button
-            small
-            variant="secondary"
-            label={entry.isFavorite ? '⭐ 즐겨찾기 해제' : '☆ 즐겨찾기'}
-            onPress={() => diary.toggleFavorite(entry.id)}
-          />
-          <Button
-            small
-            variant="secondary"
-            label="✏️ 수정"
-            onPress={() => router.push({ pathname: '/diary/edit/[id]', params: { id: entry.id } })}
-          />
-          {!confirmDelete ? (
-            <Button small variant="ghost" label="🗑 휴지통으로" onPress={() => setConfirmDelete(true)} />
-          ) : (
-            <Button
-              small
-              variant="danger"
-              label="정말 휴지통으로 보낼까요?"
-              onPress={() => {
-                diary.trashEntry(entry.id);
-                router.back();
-              }}
-            />
-          )}
-        </View>
-
         <AppText variant="caption" color="secondary">
-          공개 범위: {entry.visibility === 'private' ? '🔒 나만 보기' : entry.visibility} · 친구 공유는
-          Supabase 연결(Phase 3) 후 제공돼요.
+          공개 범위: {entry.visibility === 'private' ? '나만 보기' : entry.visibility} · 친구 공유
+          기능은 곧 만나요.
         </AppText>
       </View>
     </Screen>

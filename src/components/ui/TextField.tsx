@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleProp, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 
 import { radius, spacing, typography } from '@/theme/tokens';
@@ -11,20 +11,33 @@ interface TextFieldProps extends TextInputProps {
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function TextField({ label, error, containerStyle, style, ...rest }: TextFieldProps) {
-  const { colors } = useTheme();
+/** 입력창 — 인지가 필요한 경계는 borderStrong, 포커스 시 primary 2px */
+export function TextField({ label, error, containerStyle, style, onFocus, onBlur, ...rest }: TextFieldProps) {
+  const { colors, scheme } = useTheme();
+  const [focused, setFocused] = useState(false);
   return (
     <View style={[{ gap: spacing.xs }, containerStyle]}>
-      {label ? <AppText variant="bodySmall" weight="600">{label}</AppText> : null}
+      {label ? (
+        <AppText variant="label">{label}</AppText>
+      ) : null}
       <TextInput
         accessibilityLabel={label ?? rest.placeholder}
         placeholderTextColor={colors.textSecondary}
+        keyboardAppearance={scheme}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         {...rest}
         style={[
           {
-            backgroundColor: colors.surface,
-            borderWidth: 1.5,
-            borderColor: error ? colors.error : colors.border,
+            backgroundColor: colors.inputBackground,
+            borderWidth: focused || error ? 2 : 1,
+            borderColor: error ? colors.error : focused ? colors.focusRing : colors.borderStrong,
             borderRadius: radius.md,
             paddingHorizontal: spacing.lg,
             paddingVertical: spacing.md,
@@ -36,9 +49,11 @@ export function TextField({ label, error, containerStyle, style, ...rest }: Text
         ]}
       />
       {error ? (
-        <AppText variant="caption" color="error">
-          {error}
-        </AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          <AppText variant="caption" color="error" accessibilityLiveRegion="polite">
+            {error}
+          </AppText>
+        </View>
       ) : null}
     </View>
   );

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -12,10 +13,10 @@ import { useExpressions } from '@/state/useExpressions';
 import { useUsage } from '@/state/useUsage';
 import { spacing } from '@/theme/tokens';
 
-function StatCard({ emoji, label, value }: { emoji: string; label: string; value: string }) {
+function StatCard({ icon, label, value }: { icon: React.ComponentProps<typeof AppIcon>['name']; label: string; value: string }) {
   return (
     <Card style={{ flex: 1, minWidth: 140, alignItems: 'center', gap: spacing.xs }}>
-      <AppText style={{ fontSize: 24, lineHeight: 32 }}>{emoji}</AppText>
+      <AppIcon name={icon} size={22} color="accent" />
       <AppText variant="heading">{value}</AppText>
       <AppText variant="caption" color="secondary">
         {label}
@@ -50,17 +51,17 @@ export default function StatsScreen() {
     <Screen>
       <View style={{ gap: spacing.lg }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          <StatCard emoji="📖" label="작성한 일기" value={String(active.length)} />
-          <StatCard emoji="🗓" label="총 학습 일수" value={`${uniqueDays}일`} />
-          <StatCard emoji="🔥" label="연속 작성" value={`${streak}일`} />
-          <StatCard emoji="💬" label="AI에게 말한 문장" value={String(spokenSentences)} />
-          <StatCard emoji="📚" label="저장한 표현" value={String(expressions.length)} />
+          <StatCard icon="book" label="작성한 일기" value={String(active.length)} />
+          <StatCard icon="calendar" label="총 학습 일수" value={`${uniqueDays}일`} />
+          <StatCard icon="trending-up" label="연속 작성" value={`${streak}일`} />
+          <StatCard icon="message-circle" label="AI에게 말한 문장" value={String(spokenSentences)} />
+          <StatCard icon="book-open" label="저장한 표현" value={String(expressions.length)} />
         </View>
 
         <Card style={{ gap: spacing.sm }}>
           <AppText variant="subheading">언어별 일기</AppText>
           <AppText variant="bodySmall" color="secondary">
-            🇺🇸 영어 {enCount}개 · 🇯🇵 일본어 {jaCount}개
+            영어 {enCount}개 · 일본어 {jaCount}개
           </AppText>
         </Card>
 
@@ -77,7 +78,7 @@ export default function StatsScreen() {
         </Card>
 
         <AppText variant="caption" color="secondary">
-          ℹ️ 모든 수치는 기록된 활동 기준이에요. 발음 정확도처럼 정확히 측정할 수 없는 값은
+          모든 수치는 기록된 활동 기준이에요. 발음 정확도처럼 정확히 측정할 수 없는 값은
           표시하지 않아요.
         </AppText>
       </View>

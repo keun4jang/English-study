@@ -172,7 +172,7 @@ export default function TextWriteScreen() {
 
         <Card soft>
           <AppText variant="caption" color="secondary">
-            🔒 일기는 기본으로 비공개예요. 작성 중인 내용은 이 기기에 자동 저장돼요.
+            일기는 기본으로 비공개예요. 작성 중인 내용은 이 기기에 자동 저장돼요.
           </AppText>
         </Card>
 

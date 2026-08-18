@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Platform, View } from 'react-native';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -35,7 +36,7 @@ export default function Login() {
     <Screen>
       <View style={{ gap: spacing.xl, paddingTop: spacing.xxxl, flexGrow: 1 }}>
         <View style={{ alignItems: 'center', gap: spacing.sm }}>
-          <AppText style={{ fontSize: 48, lineHeight: 60 }}>📖</AppText>
+          <AppIcon name="book-open" size={40} color="accent" />
           <AppText variant="title">{appConfig.appName}</AppText>
           <AppText variant="bodySmall" color="secondary" align="center">
             {appConfig.tagline}
@@ -61,13 +62,13 @@ export default function Login() {
           />
           {!supabaseReady ? (
             <AppText variant="caption" color="secondary" align="center">
-              ⚙️ 소셜/이메일 로그인은 Supabase 연결 후 활성화돼요 (README 참고)
+              소셜/이메일 로그인은 온라인 계정 연결 준비가 끝나면 열려요
             </AppText>
           ) : null}
         </Card>
 
         <Card soft style={{ gap: spacing.md }}>
-          <AppText variant="subheading">✨ Demo 모드로 시작</AppText>
+          <AppText variant="subheading">Demo 모드로 시작</AppText>
           <AppText variant="bodySmall" color="secondary">
             계정 없이 이 기기에만 저장되는 체험 모드예요. AI는 Mock으로 동작해요.
           </AppText>

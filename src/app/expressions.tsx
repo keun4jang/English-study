@@ -32,7 +32,7 @@ export default function ExpressionsScreen() {
     return (
       <Screen>
         <EmptyState
-          emoji="📚"
+          icon="book-open"
           title="아직 저장한 표현이 없어요"
           description="AI 대화의 교정 카드에서 '단어장 저장'을 누르면 여기에 모여요."
         />
@@ -65,14 +65,16 @@ export default function ExpressionsScreen() {
                         <Button
                           small
                           variant="secondary"
-                          label="🔊 예문 듣기"
+                          icon="volume-2"
+                          label="예문 듣기"
                           onPress={() =>
                             speak(e.example || e.expression, { language: e.language, rate: speechRate })
                           }
                         />
                         <Button
                           small
-                          label="알아요 ✓"
+                          icon="check"
+                          label="알아요"
                           onPress={() => {
                             store.markKnown(e.id);
                             setRevealedId(null);
@@ -99,7 +101,7 @@ export default function ExpressionsScreen() {
         ) : (
           <Card soft>
             <AppText variant="bodySmall" color="secondary">
-              ✅ 오늘 복습할 표현을 모두 봤어요!
+              오늘 복습할 표현을 모두 봤어요.
             </AppText>
           </Card>
         )}
@@ -115,7 +117,8 @@ export default function ExpressionsScreen() {
                 <Button
                   small
                   variant="ghost"
-                  label={e.isFavorite ? '⭐' : '☆'}
+                  icon={e.isFavorite ? 'check' : 'bookmark'}
+                  label={e.isFavorite ? '보관됨' : '보관'}
                   onPress={() => store.toggleFavorite(e.id)}
                 />
               </View>

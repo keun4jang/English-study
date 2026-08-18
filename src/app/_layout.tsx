@@ -1,7 +1,8 @@
+import { Lora_500Medium, Lora_600SemiBold, useFonts } from '@expo-google-fonts/lora';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
@@ -11,19 +12,22 @@ import { palette } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 function SplashFallback() {
-  // 스토어 복원 중 잠깐 보이는 스플래시 (흰 화면 방지)
+  // 스토어/폰트 로딩 중 잠깐 보이는 스플래시 (흰 화면 방지) — 시스템 테마 반영
+  const scheme = useColorScheme();
+  const colors = palette[scheme === 'dark' ? 'dark' : 'light'];
   return (
     <View
       style={{
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: palette.light.background,
+        backgroundColor: colors.background,
         gap: 12,
       }}
     >
-      <AppText style={{ fontSize: 48, lineHeight: 60 }}>📖</AppText>
-      <AppText variant="heading">{appConfig.appName}</AppText>
+      <AppText variant="title" style={{ color: colors.primary }}>
+        {appConfig.appName}
+      </AppText>
       <AppText variant="caption" color="secondary">
         v{appConfig.version}
       </AppText>
@@ -66,7 +70,11 @@ function RootStack() {
 
 export default function RootLayout() {
   const hydrated = useHydrated();
-  return (
-    <SafeAreaProvider>{hydrated ? <RootStack /> : <SplashFallback />}</SafeAreaProvider>
-  );
+  // 영어 일기용 세리프(Lora)만 번들 — 로딩 실패 시 시스템 폰트로 계속 진행
+  const [fontsLoaded, fontError] = useFonts({
+    Lora_500Medium,
+    Lora_600SemiBold,
+  });
+  const ready = hydrated && (fontsLoaded || Boolean(fontError));
+  return <SafeAreaProvider>{ready ? <RootStack /> : <SplashFallback />}</SafeAreaProvider>;
 }
