@@ -1,6 +1,8 @@
 name: Deploy Web (PWA) to GitHub Pages
 
-# 이 브랜치에 push될 때마다 빌드 → GitHub Pages 배포.
+# 이 브랜치에 push될 때마다 빌드 → gh-pages 브랜치로 배포.
+# (gh-pages 브랜치가 생기면 GitHub Pages가 자동 활성화된다.
+#  만약 활성화되지 않으면 Settings → Pages에서 Branch: gh-pages를 한 번만 선택.)
 # 배포 후 폰의 PWA는 앱 내 "업데이트 확인" 또는 자동 배너로 새 버전을 받는다.
 on:
   push:
@@ -8,16 +10,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: pages-deploy
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,23 +42,14 @@ jobs:
           EXPO_WEB_BASE_URL: /English-study
         run: npm run build:web
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      - name: Disable Jekyll on Pages
+        run: touch dist/.nojekyll
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: 'deploy: ${{ github.event.head_commit.message }}'
