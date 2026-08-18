@@ -433,24 +433,28 @@ export class MockAIProvider implements AIProvider {
   async createFinalDiary(ctx: FinalDiaryContext): Promise<FinalDiaryResult> {
     await delay(700);
     // 사용자가 실제로 말한 문장만 사용한다 (내용을 지어내지 않는다).
-    const userSentences = ctx.messages
-      .filter((m) => m.role === 'user')
-      .map((m) => m.text.trim())
-      .filter(Boolean);
+    const userMessages = ctx.messages.filter((m) => m.role === 'user' && m.text.trim());
+    const originalSentences = userMessages.map((m) => m.text.trim());
+    // 자연스러운 버전: AI 교정문이 있으면 교정문으로 반영
+    const naturalSentences = userMessages.map((m) => (m.correctedText ?? m.text).trim());
+    // 다음에 연습할 문장: 교정이 있었던 문장의 "교정된" 형태
+    const practiceSentences = userMessages
+      .filter((m) => m.correctedText && m.correctedText !== m.text)
+      .map((m) => m.correctedText!.trim())
+      .slice(0, 3);
 
-    const body = userSentences.join(' ');
     const isEn = ctx.language === 'en';
     return {
       titleCandidates: isEn
         ? ['My Day Today', 'A Small Moment', 'Today in My Words']
         : ['今日の日記', '小さな一日', '今日のできごと'],
-      simpleVersion: body,
-      naturalVersion: body,
+      simpleVersion: originalSentences.join(' '),
+      naturalVersion: naturalSentences.join(' '),
       translationKo:
         '(Mock 모드: 실제 AI 연결 후 한국어 번역이 제공됩니다. 내용은 내가 말한 문장 그대로예요.)',
       keyExpressions: [],
       commonMistakes: [],
-      practiceSentences: userSentences.slice(0, 2),
+      practiceSentences,
       encouragementKo: '오늘도 외국어로 하루를 기록했어요. 그것만으로 충분히 멋져요! 🌷',
     };
   }

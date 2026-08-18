@@ -24,8 +24,10 @@ import { useFinalize } from '@/state/useFinalize';
 import { useSettings } from '@/state/useSettings';
 import { useUsage } from '@/state/useUsage';
 import { spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 export default function ChatScreen() {
+  const { colors } = useTheme();
   const user = useAuth((s) => s.user);
   const learning = useSettings((s) => s.learning);
   const voice = useSettings((s) => s.voice);
@@ -250,10 +252,26 @@ export default function ChatScreen() {
     setFinishing(true);
     try {
       const provider = getAIProvider();
+      // 각 사용자 발화에 대한 교정문을 찾아 함께 전달 (최종 일기에 교정 반영)
+      const messagesWithCorrections = messages.map((m, i) => {
+        let correctedText: string | null = null;
+        if (m.role === 'user') {
+          const next = messages[i + 1];
+          if (
+            next?.role === 'assistant' &&
+            next.correction &&
+            next.correction.original === m.text &&
+            next.correction.corrected !== m.text
+          ) {
+            correctedText = next.correction.corrected;
+          }
+        }
+        return { role: m.role, text: m.text, correctedText };
+      });
       const result = await provider.createFinalDiary({
         language: learning.language,
         level: learning.level,
-        messages: messages.map((m) => ({ role: m.role, text: m.text })),
+        messages: messagesWithCorrections,
         requestId: newId(),
       });
       usage.recordDiaryGeneration();
@@ -312,7 +330,14 @@ export default function ChatScreen() {
               savedExpressions={savedExpressionSet}
               onSpeakAgain={() => setPracticeTarget(pendingCorrection.correction.corrected)}
               onKeepOriginal={() => setPendingCorrection(null)}
-              onApplyCorrection={() => setPendingCorrection(null)}
+              onApplyCorrection={() => {
+                // 내 메시지를 교정문으로 실제 교체
+                chat.updateMessageText(
+                  pendingCorrection.userMessageId,
+                  pendingCorrection.correction.corrected,
+                );
+                setPendingCorrection(null);
+              }}
               onContinue={() => setPendingCorrection(null)}
               onSaveExpression={(k) => {
                 if (!user) return;
@@ -394,6 +419,13 @@ export default function ChatScreen() {
         language={learning.language}
         speechRate={voice.speechRate}
         onSuccess={() => {
+          // 다시 말하기 성공 → 교정문을 내 메시지에 반영
+          if (pendingCorrection) {
+            chat.updateMessageText(
+              pendingCorrection.userMessageId,
+              pendingCorrection.correction.corrected,
+            );
+          }
           setPracticeTarget(null);
           setPendingCorrection(null);
         }}
@@ -414,7 +446,7 @@ export default function ChatScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.45)',
+            backgroundColor: colors.overlay,
             justifyContent: 'center',
             padding: spacing.lg,
           }}

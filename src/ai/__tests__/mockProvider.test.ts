@@ -51,6 +51,26 @@ describe('MockAIProvider', () => {
     expect(result.titleCandidates.length).toBeGreaterThan(0);
   });
 
+  it('자연스러운 버전에는 교정문이 반영되고, 연습 문장은 교정된 형태', async () => {
+    const result = await provider.createFinalDiary({
+      language: 'en',
+      level: 'beginner',
+      messages: [
+        { role: 'assistant', text: 'How was your day?' },
+        {
+          role: 'user',
+          text: 'so tired because very hot',
+          correctedText: "I'm so tired because it's very hot.",
+        },
+        { role: 'user', text: 'I went home early.', correctedText: null },
+      ],
+      requestId: 'test-request-3',
+    });
+    expect(result.naturalVersion).toBe("I'm so tired because it's very hot. I went home early.");
+    expect(result.simpleVersion).toBe('so tired because very hot I went home early.');
+    expect(result.practiceSentences).toEqual(["I'm so tired because it's very hot."]);
+  });
+
   it('사용자 발화 키워드와 관련된 답변 선택 (피곤함)', async () => {
     const response = await provider.evaluateAndReply('so tired because very hot', baseCtx);
     // "tired" 또는 "hot" 주제에 반응해야 한다 (고정 로테이션 금지)

@@ -17,6 +17,8 @@ interface ChatState {
     translationKo?: string | null;
     correction?: CorrectionResult | null;
   }) => ChatMessage;
+  /** "교정문 적용" 시 사용자 메시지 텍스트를 교정문으로 교체 */
+  updateMessageText: (id: string, text: string) => void;
   finishConversation: (id: string) => void;
   messagesFor: (conversationId: string) => ChatMessage[];
   wipeAll: () => void;
@@ -52,6 +54,10 @@ export const useChat = create<ChatState>()(
         set((s) => ({ messages: [...s.messages, message] }));
         return message;
       },
+      updateMessageText: (id, text) =>
+        set((s) => ({
+          messages: s.messages.map((m) => (m.id === id ? { ...m, text } : m)),
+        })),
       finishConversation: (id) =>
         set((s) => ({
           conversations: s.conversations.map((c) =>

@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { ColorValue, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { radius } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -43,6 +44,7 @@ function WriteIcon({ focused }: { focused: boolean }) {
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -52,8 +54,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
+          // 고정 높이 대신 safe area(아이폰 홈 인디케이터) 반영
+          height: 58 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 6,
         },
         tabBarActiveTintColor: colors.primary,

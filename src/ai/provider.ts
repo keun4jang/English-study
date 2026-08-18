@@ -16,7 +16,8 @@ export interface AiTurnContext {
 export interface FinalDiaryContext {
   language: LearningLanguage;
   level: UserLevel;
-  messages: { role: 'user' | 'assistant'; text: string }[];
+  /** correctedText: 해당 사용자 발화에 대한 AI 교정문 (있는 경우) — 최종 일기에 반영 */
+  messages: { role: 'user' | 'assistant'; text: string; correctedText?: string | null }[];
   requestId: string;
 }
 
