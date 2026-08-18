@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mellow Diary",
     "slug": "mellow-diary",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mellowdiary",
@@ -18,7 +18,9 @@
     },
     "android": {
       "package": "com.mellowdiary.app",
-      "permissions": ["android.permission.RECORD_AUDIO"],
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#FFF9F5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

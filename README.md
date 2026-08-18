@@ -93,9 +93,29 @@ npm run build:web   # Web/PWA 정적 빌드 (dist/)
 - 비용 보호 장치: 일일 AI 대화 20턴 / 일기 완성 3회 (기본값, 환경변수로 조절),
   입력 2,000자 제한, idempotency key로 중복 과금 방지, `AI_ENABLED` 스위치.
 
+## 📱 내 폰에 설치하기 (PWA)
+
+push할 때마다 GitHub Actions가 자동으로 빌드해 **GitHub Pages**에 배포합니다.
+
+1. GitHub 저장소 → **Actions** 탭에서 "Deploy Web (PWA)" 워크플로가 성공했는지 확인
+   (최초 1회는 Settings → Pages에서 Source가 "GitHub Actions"인지 확인)
+2. 폰 브라우저에서 열기: **https://keun4jang.github.io/English-study/**
+3. 홈 화면에 추가:
+   - **Android (Chrome)**: 메뉴(⋮) → "홈 화면에 추가" 또는 "앱 설치"
+   - **iPhone (Safari)**: 공유 버튼(□↑) → "홈 화면에 추가"
+
+### 🔄 재설치 없는 업데이트
+
+새 버전을 push하면 배포가 끝난 뒤 앱 안에서 자동으로 알려줍니다:
+
+- 오늘 홈에 **"새 버전 vX.X.X이 준비됐어요 — 업데이트가 필요해요!"** 배너 표시
+- **"지금 업데이트"** 버튼 한 번이면 재설치 없이 새 버전으로 갱신 (서비스 워커 교체 + 새로고침)
+- 설정 → 지원 → **"업데이트 확인"**으로 언제든 수동 확인 가능
+- 일기 데이터는 기기에 저장되므로 업데이트해도 유지됩니다
+
 ## 친구 테스트
 
-우선순위: **① Web/PWA 링크 → ② Android APK → ③ Expo Dev Build → ④ TestFlight(Apple 계정 준비 후)**
+우선순위: **① Web/PWA 링크(위 주소 공유) → ② Android APK → ③ Expo Dev Build → ④ TestFlight(Apple 계정 준비 후)**
 
 - iPhone 친구에게는 우선 PWA를 권장합니다. Apple 개발자 계정 없이 여러 친구에게
   네이티브 앱을 지속 배포하는 것은 불가능합니다.

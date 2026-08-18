@@ -14,7 +14,13 @@ export const appConfig = {
   /** 피드백 수신 이메일 (의견 보내기 메뉴에서 사용) */
   feedbackEmail: 'feedback@example.com',
   /** GitHub 저장소 (버그 제보 링크) */
-  repositoryUrl: 'https://github.com/keun4jang/english-study',
+  repositoryUrl: 'https://github.com/keun4jang/English-study',
+  /**
+   * 업데이트 확인용 배포 주소 (version.json 위치).
+   * Web/PWA에서는 상대 경로를 쓰므로 이 값은 네이티브(APK)에서만 사용된다.
+   * EXPO_PUBLIC_UPDATE_URL 환경변수로 재정의 가능.
+   */
+  defaultUpdateUrl: 'https://keun4jang.github.io/English-study',
 } as const;
 
 export type AppEnv = 'development' | 'preview' | 'production';

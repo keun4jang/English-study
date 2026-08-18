@@ -12,6 +12,7 @@ import { TextField } from '@/components/ui/TextField';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isMockAI } from '@/ai';
 import { appConfig, getAppEnv, isSupabaseConfigured } from '@/config/appConfig';
+import { applyWebUpdate, checkForUpdate } from '@/lib/updates';
 import { getUsageLimits } from '@/lib/usageLimits';
 import { useAuth } from '@/state/useAuth';
 import { useChat } from '@/state/useChat';
@@ -73,7 +74,27 @@ export default function SettingsTab() {
   const [nicknameEdit, setNicknameEdit] = useState('');
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [exportCopied, setExportCopied] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [updateReady, setUpdateReady] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const limits = getUsageLimits();
+
+  const runUpdateCheck = async () => {
+    setCheckingUpdate(true);
+    setUpdateReady(false);
+    const result = await checkForUpdate();
+    if (result.status === 'update-available' && result.latest) {
+      setUpdateStatus(
+        `새 버전 v${result.latest.version}이(가) 있어요! 업데이트가 필요해요. (현재 v${result.current})`,
+      );
+      setUpdateReady(true);
+    } else if (result.status === 'up-to-date') {
+      setUpdateStatus(`최신 버전을 사용 중이에요 (v${result.current}) ✓`);
+    } else {
+      setUpdateStatus('업데이트 서버에 연결할 수 없어요. 네트워크를 확인하거나 나중에 다시 시도해 주세요.');
+    }
+    setCheckingUpdate(false);
+  };
 
   /** 데이터 내보내기 — JSON을 클립보드로 복사 (파일 저장은 추후) */
   const exportData = async () => {
@@ -348,6 +369,21 @@ export default function SettingsTab() {
         {/* 의견 보내기 & 정보 */}
         <SectionTitle>지원</SectionTitle>
         <Card style={{ gap: spacing.md }}>
+          <Button
+            small
+            variant="secondary"
+            label={checkingUpdate ? '확인 중…' : '🔄 업데이트 확인'}
+            loading={checkingUpdate}
+            onPress={runUpdateCheck}
+          />
+          {updateStatus ? (
+            <AppText variant="caption" color="secondary">
+              {updateStatus}
+            </AppText>
+          ) : null}
+          {updateReady ? (
+            <Button small label="지금 업데이트" onPress={() => applyWebUpdate()} />
+          ) : null}
           <Button small variant="secondary" label="💌 의견 보내기" onPress={sendFeedback} />
           <Button small variant="secondary" label="ℹ️ 앱 정보 및 버전" onPress={() => router.push('/about')} />
         </Card>

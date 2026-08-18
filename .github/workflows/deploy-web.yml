@@ -1,0 +1,64 @@
+name: Deploy Web (PWA) to GitHub Pages
+
+# 이 브랜치에 push될 때마다 빌드 → GitHub Pages 배포.
+# 배포 후 폰의 PWA는 앱 내 "업데이트 확인" 또는 자동 배너로 새 버전을 받는다.
+on:
+  push:
+    branches: [claude/ai-diary-app-dev-sgdijm, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint & typecheck & test
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+
+      - name: Build web (PWA)
+        env:
+          # GitHub Pages 하위 경로(/English-study) 기준으로 자산 경로 설정
+          EXPO_WEB_BASE_URL: /English-study
+        run: npm run build:web
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

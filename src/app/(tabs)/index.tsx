@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Screen } from '@/components/ui/Screen';
+import { UpdateBanner } from '@/components/ui/UpdateBanner';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isMockAI } from '@/ai';
 import { calcStreak, diffDays, formatDateKo, todayKey } from '@/lib/dates';
@@ -66,6 +67,8 @@ export default function TodayHome() {
             </AppText>
           ) : null}
         </View>
+
+        <UpdateBanner />
 
         <Card soft style={{ gap: spacing.md }}>
           <AppText variant="caption" color="secondary">

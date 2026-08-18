@@ -4,15 +4,21 @@ Apple 개발자 계정 없이도 친구들과 테스트할 수 있는 방법, �
 
 ## 1. Web/PWA 링크 (가장 쉬움, iPhone 포함 전원 가능) ✅
 
+**자동 배포가 이미 설정되어 있다** (`.github/workflows/deploy-web.yml`):
+브랜치에 push하면 GitHub Actions가 lint/테스트/빌드 후 GitHub Pages에 배포한다.
+
+- 공유할 주소: **https://keun4jang.github.io/English-study/**
+- 새 버전을 push하면 친구 폰의 앱에 "업데이트가 필요해요" 배너가 뜨고,
+  버튼 한 번으로 재설치 없이 갱신된다 (설정 → 지원 → "업데이트 확인"으로 수동 확인도 가능)
+
+수동 빌드가 필요하면:
+
 ```bash
-npm run build:web        # dist/ 생성
+npm run build:web        # dist/ 생성 (PWA 후처리 포함)
 ```
 
-`dist/`를 무료 정적 호스팅에 올리고 링크를 공유한다. 예:
-
-- **Cloudflare Pages** (무료, 결제 수단 불필요): `npx wrangler pages deploy dist`
-- **GitHub Pages**: dist를 gh-pages 브랜치로 push
-- **Netlify Drop**: 드래그&드롭
+다른 무료 호스팅에 올려도 된다 (Cloudflare Pages: `npx wrangler pages deploy dist`,
+Netlify Drop 등). 어디에 올려도 업데이트 확인은 같은 사이트의 version.json을 읽으므로 동작한다.
 
 친구 안내:
 
