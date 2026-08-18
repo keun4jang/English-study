@@ -1,6 +1,7 @@
 import * as Speech from 'expo-speech';
 
 import { LEARNING_LANGUAGE_TAGS, LearningLanguage, SpeechRate } from '@/domain/types';
+import { sanitizeForSpeech } from '@/lib/speechText';
 
 /**
  * TTS — 기기 기본 음성 합성(expo-speech)만 사용한다 (비용 0원).
@@ -25,9 +26,12 @@ export interface SpeakOptions {
 
 export async function speak(text: string, options: SpeakOptions): Promise<void> {
   await stopSpeaking();
+  // 이모지/기호는 음성으로 읽지 않는다 ("😊"가 "smiling face"로 읽히는 것 방지)
+  const speakable = sanitizeForSpeech(text);
+  if (!speakable) return;
   const rate = options.extraSlow ? 0.55 : RATE_MAP[options.rate ?? 'normal'];
   // 긴 문장은 문장 단위로 나눠 재생 (일부 플랫폼의 길이 제한 대응)
-  const chunks = splitIntoChunks(text);
+  const chunks = splitIntoChunks(speakable);
   chunks.forEach((chunk, i) => {
     Speech.speak(chunk, {
       language: LEARNING_LANGUAGE_TAGS[options.language],

@@ -1,4 +1,4 @@
-import { MockAIProvider } from '../mockProvider';
+import { MockAIProvider, pickContextualReply } from '../mockProvider';
 import { AiTurnContext } from '../provider';
 import { aiTurnResponseSchema } from '../schema';
 
@@ -49,6 +49,30 @@ describe('MockAIProvider', () => {
     // assistant 문장은 일기에 포함되지 않는다
     expect(result.simpleVersion).not.toContain('How was your day');
     expect(result.titleCandidates.length).toBeGreaterThan(0);
+  });
+
+  it('사용자 발화 키워드와 관련된 답변 선택 (피곤함)', async () => {
+    const response = await provider.evaluateAndReply('so tired because very hot', baseCtx);
+    // "tired" 또는 "hot" 주제에 반응해야 한다 (고정 로테이션 금지)
+    expect(response.assistant.replyTargetLanguage.toLowerCase()).toMatch(
+      /tired|rest|sleep|heat|hot|water|cool/,
+    );
+  });
+
+  it('주어 없는 형용사 시작 문장 교정 (so tired because very hot)', async () => {
+    const response = await provider.evaluateAndReply('so tired because very hot', baseCtx);
+    expect(response.correction.severity).toBe('major');
+    expect(response.correction.corrected).toBe("I'm so tired because it's very hot.");
+  });
+
+  it('영상 촬영 발화에는 영상 관련 질문', () => {
+    const pick = pickContextualReply("I'm shooting the video", 'en', 0);
+    expect(pick.reply.toLowerCase()).toMatch(/video|film/);
+  });
+
+  it('주제 미감지 시 핵심 단어를 인용해 질문', () => {
+    const pick = pickContextualReply('I visited the museum', 'en', 0);
+    expect(pick.reply).toContain('museum');
   });
 
   it('일본어 컨텍스트에서 일본어 답변 제공', async () => {
