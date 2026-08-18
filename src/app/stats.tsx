@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 
+import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
-import { calcStreak, todayKey } from '@/lib/dates';
+import { calcStreakGenerous, todayKey } from '@/lib/dates';
 import { getUsageLimits } from '@/lib/usageLimits';
 import { useChat } from '@/state/useChat';
 import { selectActiveEntries, useDiary } from '@/state/useDiary';
@@ -39,7 +40,10 @@ export default function StatsScreen() {
   const today = todayKey();
   const active = useMemo(() => selectActiveEntries(entries), [entries]);
   const uniqueDays = useMemo(() => new Set(active.map((e) => e.localDate)).size, [active]);
-  const streak = useMemo(() => calcStreak(active.map((e) => e.localDate), today), [active, today]);
+  const streakInfo = useMemo(
+    () => calcStreakGenerous(active.map((e) => e.localDate), today),
+    [active, today],
+  );
   const spokenSentences = useMemo(
     () => messages.filter((m) => m.role === 'user').length,
     [messages],
@@ -53,10 +57,20 @@ export default function StatsScreen() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
           <StatCard icon="book" label="작성한 일기" value={String(active.length)} />
           <StatCard icon="calendar" label="총 학습 일수" value={`${uniqueDays}일`} />
-          <StatCard icon="trending-up" label="연속 작성" value={`${streak}일`} />
+          <StatCard icon="trending-up" label="연속 작성" value={`${streakInfo.streak}일`} />
           <StatCard icon="message-circle" label="AI에게 말한 문장" value={String(spokenSentences)} />
           <StatCard icon="book-open" label="저장한 표현" value={String(expressions.length)} />
         </View>
+
+        <Card style={{ gap: spacing.sm }}>
+          <AppText variant="subheading">기록 잔디</AppText>
+          <ActivityHeatmap dateKeys={active.map((e) => e.localDate)} />
+          {streakInfo.restDaysUsed > 0 ? (
+            <AppText variant="caption" color="secondary">
+              연속 기록에는 쉬어간 날(주 1회)이 이어져 있어요.
+            </AppText>
+          ) : null}
+        </Card>
 
         <Card style={{ gap: spacing.sm }}>
           <AppText variant="subheading">언어별 일기</AppText>

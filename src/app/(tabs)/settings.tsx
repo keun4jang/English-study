@@ -254,6 +254,17 @@ export default function SettingsTab() {
             </>
           ) : null}
           <OptionGroup
+            title="하루 목표 (문장 수)"
+            options={[
+              { value: '1', label: '1문장', description: '하루 한 문장이면 충분해요.' },
+              { value: '3', label: '3문장' },
+              { value: '5', label: '5문장' },
+              { value: '10', label: '10문장' },
+            ]}
+            value={String(settings.learning.dailyGoalSentences) as '1' | '3' | '5' | '10'}
+            onChange={(v) => settings.updateLearning({ dailyGoalSentences: Number(v) })}
+          />
+          <OptionGroup
             title="재말하기 통과 기준"
             options={[
               { value: '0.6', label: '너그럽게' },

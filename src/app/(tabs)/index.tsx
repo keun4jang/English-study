@@ -8,11 +8,14 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { GoalProgress } from '@/components/ui/GoalProgress';
 import { Screen } from '@/components/ui/Screen';
 import { UpdateBanner } from '@/components/ui/UpdateBanner';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isMockAI } from '@/ai';
-import { calcStreak, diffDays, formatDateKo, todayKey } from '@/lib/dates';
+import { calcStreakGenerous, diffDays, formatDateKo, todayKey } from '@/lib/dates';
+import { computeDailyProgress } from '@/lib/goals';
+import { usePracticeQueue } from '@/lib/practiceQueue';
 import { useAuth } from '@/state/useAuth';
 import { useChat } from '@/state/useChat';
 import { selectActiveEntries, selectEntriesByDate, useDiary } from '@/state/useDiary';
@@ -55,8 +58,17 @@ export default function TodayHome() {
   );
 
   const active = useMemo(() => selectActiveEntries(entries), [entries]);
-  const streak = useMemo(() => calcStreak(active.map((e) => e.localDate), today), [active, today]);
+  const streakInfo = useMemo(
+    () => calcStreakGenerous(active.map((e) => e.localDate), today),
+    [active, today],
+  );
   const reviewDue = expressions.filter((e) => e.nextReviewDate <= today).length;
+  const practiceQueue = usePracticeQueue();
+  const dailyGoal = useSettings((s) => s.learning.dailyGoalSentences);
+  const progress = useMemo(
+    () => computeDailyProgress({ messages: chatMessages, entries, today, goal: dailyGoal }),
+    [chatMessages, entries, today, dailyGoal],
+  );
 
   // 오늘의 질문: 날짜 기반 기본 + "다른 질문 보기"로 교체 (150ms fade, Reduce Motion 시 즉시)
   const baseIndex = Math.abs(diffDays(today, '2026-01-01')) % DAILY_PROMPTS.length;
@@ -93,9 +105,10 @@ export default function TodayHome() {
             {formatDateKo(today)}
           </AppText>
           <AppText variant="display">{user?.nickname ?? '친구'}님, 안녕하세요</AppText>
-          {streak > 0 ? (
+          {streakInfo.streak > 0 ? (
             <AppText variant="bodySmall" color="secondary">
-              {streak}일째 이어서 기록하고 있어요
+              {streakInfo.streak}일째 이어서 기록하고 있어요
+              {streakInfo.restDaysUsed > 0 ? ' (하루 쉬어가도 이어져요)' : ''}
             </AppText>
           ) : null}
           {isMockAI() ? (
@@ -106,6 +119,30 @@ export default function TodayHome() {
         </View>
 
         <UpdateBanner />
+
+        {/* 오늘의 목표 — 부드러운 진행 표시 (미달성 죄책감 문구 없음) */}
+        <GoalProgress
+          total={progress.total}
+          goal={progress.goal}
+          achieved={progress.achieved}
+        />
+
+        {practiceQueue.length > 0 ? (
+          <Card style={{ gap: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <AppIcon name="mic" size={18} color="accent" />
+              <AppText variant="label">
+                다시 말해보기 연습 {practiceQueue.length}문장이 기다리고 있어요
+              </AppText>
+            </View>
+            <Button
+              size="compact"
+              variant="secondary"
+              label="연습 시작하기"
+              onPress={() => router.push('/practice')}
+            />
+          </Card>
+        ) : null}
 
         {activeConversation ? (
           <Card style={{ gap: spacing.sm }}>

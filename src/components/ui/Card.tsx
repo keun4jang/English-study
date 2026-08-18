@@ -1,12 +1,12 @@
 import React, { PropsWithChildren } from 'react';
-import { StyleProp, View, ViewStyle } from 'react-native';
+import { StyleProp, View, ViewProps, ViewStyle } from 'react-native';
 
 import { radius, raisedShadow, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 type CardVariant = 'default' | 'raised' | 'soft' | 'paper';
 
-interface CardProps extends PropsWithChildren {
+interface CardProps extends PropsWithChildren, ViewProps {
   style?: StyleProp<ViewStyle>;
   variant?: CardVariant;
   /** @deprecated variant="soft" 사용 — 하위 호환 별칭 */
@@ -17,7 +17,7 @@ interface CardProps extends PropsWithChildren {
  * 기본 카드 — radius 16.
  * 그림자는 raised(대표 카드/모달)에만 사용한다. 모든 카드에 그림자 금지.
  */
-export function Card({ children, style, variant, soft }: CardProps) {
+export function Card({ children, style, variant, soft, ...rest }: CardProps) {
   const { colors, scheme } = useTheme();
   const resolved: CardVariant = variant ?? (soft ? 'soft' : 'default');
 
@@ -30,6 +30,7 @@ export function Card({ children, style, variant, soft }: CardProps) {
 
   return (
     <View
+      {...rest}
       style={[
         {
           backgroundColor: backgrounds[resolved],

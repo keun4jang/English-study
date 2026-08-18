@@ -61,6 +61,7 @@ function RootStack() {
         <Stack.Screen name="search" options={{ title: '검색' }} />
         <Stack.Screen name="stats" options={{ title: '학습 통계' }} />
         <Stack.Screen name="expressions" options={{ title: '단어장' }} />
+        <Stack.Screen name="practice" options={{ title: '다시 말해보기' }} />
         <Stack.Screen name="trash" options={{ title: '휴지통' }} />
         <Stack.Screen name="about" options={{ title: '앱 정보' }} />
       </Stack>

@@ -24,6 +24,8 @@ export interface LearningSettings {
   /** 재말하기 유사도 기준 (0~1) */
   similarityThreshold: number;
   maxRetryCount: number;
+  /** 하루 목표 문장 수 (부담 없는 기본값 3) */
+  dailyGoalSentences: number;
 }
 
 export interface VoiceSettings {
@@ -93,6 +95,7 @@ const defaults = {
     japaneseReadingHelp: true,
     similarityThreshold: 0.75,
     maxRetryCount: 3,
+    dailyGoalSentences: 3,
   },
   voice: {
     speechRate: 'normal' as SpeechRate,

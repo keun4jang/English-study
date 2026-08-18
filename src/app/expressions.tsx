@@ -1,22 +1,59 @@
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Screen } from '@/components/ui/Screen';
+import { SavedExpression } from '@/domain/types';
 import { todayKey } from '@/lib/dates';
+import { buildQuizQuestion, MASTERY_LABELS, masteryLevel, QuizQuestion } from '@/lib/quiz';
 import { speak } from '@/speech/tts';
 import { useExpressions } from '@/state/useExpressions';
 import { useSettings } from '@/state/useSettings';
-import { spacing } from '@/theme/tokens';
+import { radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
-/** 단어장 + 간단한 간격 반복 복습 */
+type AnswerState = { picked: string; correct: boolean } | null;
+
+/** 숙련 단계 배지 */
+function MasteryBadge({ reviewCount }: { reviewCount: number }) {
+  const { colors } = useTheme();
+  const level = masteryLevel(reviewCount);
+  const bg = {
+    new: colors.primarySoft,
+    learning: colors.warningSoft,
+    familiar: colors.successSoft,
+  }[level];
+  const fg = { new: colors.primary, learning: colors.warning, familiar: colors.success }[level];
+  return (
+    <View
+      accessibilityLabel={`학습 단계: ${MASTERY_LABELS[level]}`}
+      style={{
+        backgroundColor: bg,
+        borderRadius: radius.pill,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+      }}
+    >
+      <AppText variant="caption" weight="600" style={{ color: fg }}>
+        {MASTERY_LABELS[level]}
+      </AppText>
+    </View>
+  );
+}
+
+/**
+ * 단어장 + 퀴즈형 복습.
+ * 뜻 맞히기 4지선다 — 다른 저장 표현의 뜻이 오답 보기가 된다.
+ * 정답이면 복습 간격이 늘어나고, 틀려도 "내일 다시" 부드럽게 안내한다.
+ */
 export default function ExpressionsScreen() {
+  const { colors } = useTheme();
   const store = useExpressions();
   const speechRate = useSettings((s) => s.voice.speechRate);
-  const [revealedId, setRevealedId] = useState<string | null>(null);
 
   const today = todayKey();
   const due = useMemo(
@@ -28,13 +65,46 @@ export default function ExpressionsScreen() {
     [store.expressions, today],
   );
 
+  // 퀴즈 상태: 오늘 복습할 표현들을 순서대로
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [answer, setAnswer] = useState<AnswerState>(null);
+  const [doneCount, setDoneCount] = useState(0);
+
+  const currentTarget: SavedExpression | undefined = due[Math.min(quizIndex, due.length - 1)];
+  const question: QuizQuestion | null = useMemo(
+    () => (currentTarget ? buildQuizQuestion(currentTarget, store.expressions) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentTarget?.id],
+  );
+
+  const pick = (choice: string) => {
+    if (!question || !currentTarget || answer) return;
+    const correct = choice === question.correctMeaning;
+    setAnswer({ picked: choice, correct });
+    if (correct) {
+      store.markKnown(currentTarget.id);
+    } else {
+      store.markAgain(currentTarget.id);
+    }
+    speak(currentTarget.example || currentTarget.expression, {
+      language: currentTarget.language,
+      rate: speechRate,
+    });
+  };
+
+  const next = () => {
+    setAnswer(null);
+    setDoneCount((c) => c + 1);
+    setQuizIndex(0); // due 목록이 갱신되므로 항상 맨 앞
+  };
+
   if (store.expressions.length === 0) {
     return (
       <Screen>
         <EmptyState
           icon="book-open"
           title="아직 저장한 표현이 없어요"
-          description="AI 대화의 교정 카드에서 '단어장 저장'을 누르면 여기에 모여요."
+          description="AI 대화의 교정 카드에서 '저장'을 누르면 여기에 모여요."
         />
       </Screen>
     );
@@ -43,65 +113,106 @@ export default function ExpressionsScreen() {
   return (
     <Screen>
       <View style={{ gap: spacing.lg }}>
-        {due.length > 0 ? (
+        {due.length > 0 && question && currentTarget ? (
           <View style={{ gap: spacing.md }}>
-            <AppText variant="heading">오늘의 복습 ({due.length})</AppText>
-            {due.map((e) => {
-              const revealed = revealedId === e.id;
-              return (
-                <Card key={e.id} soft style={{ gap: spacing.sm }}>
-                  <AppText variant="subheading">{e.expression}</AppText>
-                  {revealed ? (
-                    <>
-                      <AppText variant="bodySmall" color="secondary">
-                        {e.meaningKo}
-                      </AppText>
-                      {e.example ? (
-                        <AppText variant="bodySmall" color="secondary">
-                          예문: {e.example}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <AppText variant="heading">오늘의 복습</AppText>
+              <AppText variant="caption" color="secondary">
+                {doneCount}개 완료 · {due.length}개 남음
+              </AppText>
+            </View>
+
+            <Card variant="raised" style={{ gap: spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <AppText variant="subheading" style={{ flex: 1 }}>
+                  {question.expression}
+                </AppText>
+                <MasteryBadge reviewCount={currentTarget.reviewCount} />
+              </View>
+              <Button
+                size="compact"
+                variant="ghost"
+                icon="volume-2"
+                label="발음 듣기"
+                onPress={() =>
+                  speak(question.expression, { language: currentTarget.language, rate: speechRate })
+                }
+              />
+              <AppText variant="label" color="secondary">
+                이 표현의 뜻은 무엇일까요?
+              </AppText>
+              <View style={{ gap: spacing.sm }}>
+                {question.choices.map((choice) => {
+                  const isPicked = answer?.picked === choice;
+                  const isCorrectChoice = answer && choice === question.correctMeaning;
+                  return (
+                    <Pressable
+                      key={choice}
+                      accessibilityRole="button"
+                      accessibilityLabel={choice}
+                      accessibilityState={{
+                        selected: Boolean(isPicked),
+                        disabled: Boolean(answer),
+                      }}
+                      disabled={Boolean(answer)}
+                      onPress={() => pick(choice)}
+                      style={({ pressed }) => ({
+                        minHeight: 48,
+                        justifyContent: 'center',
+                        paddingHorizontal: spacing.lg,
+                        paddingVertical: spacing.md,
+                        borderRadius: radius.md,
+                        borderWidth: isCorrectChoice || isPicked ? 2 : 1,
+                        borderColor: isCorrectChoice
+                          ? colors.success
+                          : isPicked
+                            ? colors.error
+                            : colors.border,
+                        backgroundColor: isCorrectChoice
+                          ? colors.successSoft
+                          : isPicked
+                            ? colors.errorSoft
+                            : pressed
+                              ? colors.pressedBackground
+                              : colors.surface,
+                      })}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                        {isCorrectChoice ? (
+                          <AppIcon name="check-circle" size={16} color="success" decorative={false} />
+                        ) : isPicked ? (
+                          <AppIcon name="x-circle" size={16} color="error" decorative={false} />
+                        ) : null}
+                        <AppText variant="body" style={{ flex: 1 }}>
+                          {choice}
                         </AppText>
-                      ) : null}
-                      <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
-                        <Button
-                          small
-                          variant="secondary"
-                          icon="volume-2"
-                          label="예문 듣기"
-                          onPress={() =>
-                            speak(e.example || e.expression, { language: e.language, rate: speechRate })
-                          }
-                        />
-                        <Button
-                          small
-                          icon="check"
-                          label="알아요"
-                          onPress={() => {
-                            store.markKnown(e.id);
-                            setRevealedId(null);
-                          }}
-                        />
-                        <Button
-                          small
-                          variant="ghost"
-                          label="다시 볼래요"
-                          onPress={() => {
-                            store.markAgain(e.id);
-                            setRevealedId(null);
-                          }}
-                        />
                       </View>
-                    </>
-                  ) : (
-                    <Button small variant="secondary" label="뜻 보기" onPress={() => setRevealedId(e.id)} />
-                  )}
-                </Card>
-              );
-            })}
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {answer ? (
+                <View style={{ gap: spacing.sm }}>
+                  <AppText variant="bodySmall" color={answer.correct ? 'success' : 'secondary'}>
+                    {answer.correct
+                      ? '맞았어요! 다음 복습 간격이 늘어났어요.'
+                      : '괜찮아요. 이 표현은 내일 다시 만나요.'}
+                  </AppText>
+                  {currentTarget.example ? (
+                    <AppText variant="caption" color="secondary">
+                      예문: {currentTarget.example}
+                    </AppText>
+                  ) : null}
+                  <Button icon="arrow-right" label={due.length > 1 ? '다음 표현' : '복습 끝내기'} onPress={next} />
+                </View>
+              ) : null}
+            </Card>
           </View>
         ) : (
-          <Card soft>
+          <Card variant="soft">
             <AppText variant="bodySmall" color="secondary">
-              오늘 복습할 표현을 모두 봤어요.
+              오늘 복습할 표현을 모두 봤어요. 내일 또 만나요.
             </AppText>
           </Card>
         )}
@@ -110,17 +221,11 @@ export default function ExpressionsScreen() {
           <AppText variant="heading">저장한 표현 ({store.expressions.length})</AppText>
           {rest.map((e) => (
             <Card key={e.id} style={{ gap: spacing.xs }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <AppText variant="subheading" style={{ flex: 1 }}>
                   {e.expression}
                 </AppText>
-                <Button
-                  small
-                  variant="ghost"
-                  icon={e.isFavorite ? 'check' : 'bookmark'}
-                  label={e.isFavorite ? '보관됨' : '보관'}
-                  onPress={() => store.toggleFavorite(e.id)}
-                />
+                <MasteryBadge reviewCount={e.reviewCount} />
               </View>
               <AppText variant="bodySmall" color="secondary">
                 {e.meaningKo}

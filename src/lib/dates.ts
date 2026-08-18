@@ -69,6 +69,44 @@ export function calcStreak(dateKeys: string[], today: string): number {
   return streak;
 }
 
+/**
+ * 너그러운 연속 작성일 (듀오링고 streak freeze에서 착안).
+ * 연속 7일 구간마다 1일까지 쉬어가도 기록이 이어진다.
+ * 반환값에 쉬어간 날 수를 함께 담아 정직하게 표시할 수 있게 한다.
+ */
+export function calcStreakGenerous(
+  dateKeys: string[],
+  today: string,
+): { streak: number; restDaysUsed: number } {
+  const set = new Set(dateKeys);
+  // 오늘은 아직 쓸 시간이 남았으므로 안 썼어도 무료로 건너뛴다
+  let cursor = set.has(today) ? today : addDays(today, -1);
+
+  let streak = 0;
+  let restDaysUsed = 0;
+  let restBudget = 1; // 현재 7일 구간에서 남은 쉬어가기
+  let daysInWindow = 0;
+
+  while (true) {
+    if (set.has(cursor)) {
+      streak++;
+    } else if (restBudget > 0 && set.has(addDays(cursor, -1))) {
+      // 쉬어간 날은 다음(이전) 날에 기록이 있어 실제로 이어질 때만 소비한다
+      restBudget--;
+      restDaysUsed++;
+    } else {
+      break;
+    }
+    daysInWindow++;
+    if (daysInWindow === 7) {
+      daysInWindow = 0;
+      restBudget = 1;
+    }
+    cursor = addDays(cursor, -1);
+  }
+  return { streak, restDaysUsed };
+}
+
 /** "YYYY-MM-DD" → 한국어 표시 (예: 2026년 8월 18일 화요일) */
 export function formatDateKo(key: string): string {
   const [y, m, d] = key.split('-').map(Number);
