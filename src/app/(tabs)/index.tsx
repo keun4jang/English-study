@@ -13,6 +13,7 @@ import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isMockAI } from '@/ai';
 import { calcStreak, diffDays, formatDateKo, todayKey } from '@/lib/dates';
 import { useAuth } from '@/state/useAuth';
+import { useChat } from '@/state/useChat';
 import { selectActiveEntries, selectEntriesByDate, useDiary } from '@/state/useDiary';
 import { useExpressions } from '@/state/useExpressions';
 import { useSettings } from '@/state/useSettings';
@@ -35,8 +36,29 @@ export default function TodayHome() {
   const expressions = useExpressions((s) => s.expressions);
   const language = useSettings((s) => s.learning.language);
 
+  const conversations = useChat((s) => s.conversations);
+  const chatMessages = useChat((s) => s.messages);
+
   const today = todayKey();
   const todayEntries = useMemo(() => selectEntriesByDate(entries, today), [entries, today]);
+  // 진행 중인 AI 대화 (뒤로 나갔어도 이어서 할 수 있게)
+  const activeConversation = useMemo(
+    () =>
+      conversations.find(
+        (c) =>
+          c.status === 'active' &&
+          c.localDate === today &&
+          chatMessages.some((m) => m.conversationId === c.id && m.role === 'user'),
+      ) ?? null,
+    [conversations, chatMessages, today],
+  );
+  const activeConversationPreview = useMemo(() => {
+    if (!activeConversation) return '';
+    const lastUser = [...chatMessages]
+      .reverse()
+      .find((m) => m.conversationId === activeConversation.id && m.role === 'user');
+    return lastUser?.text ?? '';
+  }, [activeConversation, chatMessages]);
   const active = useMemo(() => selectActiveEntries(entries), [entries]);
   const streak = useMemo(
     () => calcStreak(active.map((e) => e.localDate), today),
@@ -69,6 +91,22 @@ export default function TodayHome() {
         </View>
 
         <UpdateBanner />
+
+        {activeConversation ? (
+          <Card style={{ gap: spacing.sm }}>
+            <AppText variant="bodySmall" weight="600">
+              💬 진행 중인 AI 대화가 있어요
+            </AppText>
+            {activeConversationPreview ? (
+              <AppText variant="bodySmall" color="secondary" numberOfLines={1}>
+                마지막 이야기: “{activeConversationPreview}”
+              </AppText>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button small label="이어서 이야기하기" onPress={() => router.push('/write/chat')} />
+            </View>
+          </Card>
+        ) : null}
 
         <Card soft style={{ gap: spacing.md }}>
           <AppText variant="caption" color="secondary">

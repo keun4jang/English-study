@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, View } from 'react-native';
 
 import { getAIProvider, isMockAI } from '@/ai';
 import { ChatBubble } from '@/components/diary/ChatBubble';
@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { CorrectionResult } from '@/domain/types';
+import { todayKey } from '@/lib/dates';
 import { newId } from '@/lib/id';
 import { checkAiTurnAllowed, checkDiaryGenerationAllowed, getUsageLimits } from '@/lib/usageLimits';
 import { getSttAdapter } from '@/speech/stt';
@@ -45,7 +46,9 @@ export default function ChatScreen() {
   const [practiceTarget, setPracticeTarget] = useState<string | null>(null);
   const [limitMessage, setLimitMessage] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const [exitAction, setExitAction] = useState<object | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const navigation = useNavigation();
   const sttSupported = getSttAdapter().isSupported();
 
   const allMessages = useChat((s) => s.messages);
@@ -54,10 +57,24 @@ export default function ChatScreen() {
     [allMessages, conversationId],
   );
 
-  // 대화 시작 + 첫 인사 (렌더 이후 비동기로 생성)
+  // 대화 시작: 오늘 진행 중인 대화가 있으면 이어서, 없으면 새로 시작 + 첫 인사
   useEffect(() => {
     if (!user || conversationId) return;
     const timer = setTimeout(() => {
+      const state = useChat.getState();
+      const today = todayKey();
+      const resumable = state.conversations.find(
+        (c) =>
+          c.status === 'active' &&
+          c.localDate === today &&
+          c.language === learning.language &&
+          state.messages.some((m) => m.conversationId === c.id),
+      );
+      if (resumable) {
+        // 뒤로 나갔다 돌아와도 대화가 사라지지 않고 이어진다
+        setConversationId(resumable.id);
+        return;
+      }
       const conversation = chat.startConversation(user.id, learning.language);
       setConversationId(conversation.id);
       const greeting =
@@ -80,6 +97,35 @@ export default function ChatScreen() {
       stopSpeaking();
     };
   }, []);
+
+  // 뒤로가기 확인: 대화 중(사용자 메시지 있음 + 일기 미완성)에는 바로 나가지 않고 팝업으로 묻는다.
+  const conversation = useChat((s) => s.conversations.find((c) => c.id === conversationId));
+  const hasUnsaved =
+    conversation?.status === 'active' && messages.some((m) => m.role === 'user') && !finishing;
+  const hasUnsavedRef = useRef(false);
+  useEffect(() => {
+    hasUnsavedRef.current = hasUnsaved;
+  }, [hasUnsaved]);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasUnsavedRef.current) return;
+      e.preventDefault();
+      setExitAction(e.data.action);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const confirmExit = () => {
+    const action = exitAction;
+    setExitAction(null);
+    hasUnsavedRef.current = false; // 이번 나가기는 통과 (대화는 보관되어 이어서 할 수 있음)
+    if (action) {
+      // @ts-expect-error react-navigation action 타입은 라우터 내부 타입과 호환됨
+      navigation.dispatch(action);
+    } else {
+      router.back();
+    }
+  };
 
   const savedExpressionSet = useMemo(
     () => new Set(expressions.expressions.map((e) => e.expression)),
@@ -357,6 +403,42 @@ export default function ChatScreen() {
         }}
         onClose={() => setPracticeTarget(null)}
       />
+
+      {/* 나가기 확인 팝업 */}
+      <Modal
+        visible={exitAction !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExitAction(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            justifyContent: 'center',
+            padding: spacing.lg,
+          }}
+        >
+          <Card style={{ gap: spacing.md }}>
+            <AppText variant="subheading">대화를 마칠까요?</AppText>
+            <AppText variant="bodySmall" color="secondary">
+              지금까지의 대화로 일기를 만들 수 있어요. 그냥 나가도 대화는 사라지지 않고,
+              오늘 홈에서 이어서 이야기할 수 있어요.
+            </AppText>
+            <View style={{ gap: spacing.sm }}>
+              <Button
+                label="💌 일기 만들고 저장하기"
+                onPress={() => {
+                  setExitAction(null);
+                  finishAndCreateDiary();
+                }}
+              />
+              <Button variant="secondary" label="나가기 (대화는 보관돼요)" onPress={confirmExit} />
+              <Button variant="ghost" label="계속 이야기하기" onPress={() => setExitAction(null)} />
+            </View>
+          </Card>
+        </View>
+      </Modal>
     </Screen>
   );
 }
