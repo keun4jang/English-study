@@ -25,6 +25,8 @@ interface ExpressionsState {
   markKnown: (id: string) => void;
   /** "다시 볼래요" — 내일 다시 보여준다 */
   markAgain: (id: string) => void;
+  /** 백업에서 표현 추가 (기존 항목은 유지) */
+  importExpressions: (items: SavedExpression[]) => void;
   wipeAll: () => void;
 }
 
@@ -77,6 +79,8 @@ export const useExpressions = create<ExpressionsState>()(
             e.id === id ? { ...e, nextReviewDate: addDays(todayKey(), 1) } : e,
           ),
         })),
+      importExpressions: (items) =>
+        set((s) => ({ expressions: [...items, ...s.expressions] })),
       wipeAll: () => set({ expressions: [] }),
     }),
     { name: 'mellow-expressions', storage: persistStorage },

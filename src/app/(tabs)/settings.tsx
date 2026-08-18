@@ -12,6 +12,7 @@ import { TextField } from '@/components/ui/TextField';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isMockAI } from '@/ai';
 import { appConfig, getAppEnv, isSupabaseConfigured } from '@/config/appConfig';
+import { buildBackup, parseBackup } from '@/lib/backup';
 import { applyWebUpdate, checkForUpdate } from '@/lib/updates';
 import { getUsageLimits } from '@/lib/usageLimits';
 import { useAuth } from '@/state/useAuth';
@@ -78,6 +79,9 @@ export default function SettingsTab() {
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [restoreText, setRestoreText] = useState('');
+  const [restoreStatus, setRestoreStatus] = useState<string | null>(null);
   const limits = getUsageLimits();
 
   const runUpdateCheck = async () => {
@@ -97,11 +101,9 @@ export default function SettingsTab() {
     setCheckingUpdate(false);
   };
 
-  /** 데이터 내보내기 — JSON을 클립보드로 복사 (파일 저장은 추후) */
+  /** 백업 내보내기 — JSON을 클립보드로 복사 (외부로 전송되지 않아요) */
   const exportData = async () => {
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      app: `${appConfig.appName} v${appConfig.version}`,
+    const text = buildBackup({
       profile: auth.user,
       settings: {
         learning: settings.learning,
@@ -111,10 +113,34 @@ export default function SettingsTab() {
       },
       diaries: diary.entries,
       expressions: expressions.expressions,
-    };
-    await Clipboard.setStringAsync(JSON.stringify(payload, null, 2));
+    });
+    await Clipboard.setStringAsync(text);
     setExportCopied(true);
     setTimeout(() => setExportCopied(false), 2500);
+  };
+
+  /** 백업 가져오기 — 기존 일기는 그대로 두고 없는 것만 추가 */
+  const restoreData = () => {
+    const result = parseBackup(restoreText, {
+      diaries: diary.entries,
+      expressions: expressions.expressions,
+    });
+    if (!result.ok) {
+      const messages = {
+        'invalid-json': '백업 내용을 읽을 수 없어요. 복사한 내용 전체를 붙여넣었는지 확인해 주세요.',
+        'not-a-backup': '이 앱의 백업 파일이 아니에요. 내보내기로 만든 내용을 붙여넣어 주세요.',
+        'invalid-content': '백업 내용이 손상된 것 같아요. 다른 백업으로 시도해 주세요.',
+      };
+      setRestoreStatus(messages[result.reason]);
+      return;
+    }
+    diary.importEntries(result.diaries);
+    expressions.importExpressions(result.expressions);
+    setRestoreStatus(
+      `일기 ${result.diaries.length}개와 표현 ${result.expressions.length}개를 가져왔어요.` +
+        (result.skipped > 0 ? ` 이미 있던 ${result.skipped}개는 그대로 뒀어요.` : ''),
+    );
+    setRestoreText('');
   };
 
   const deleteAccount = () => {
@@ -165,9 +191,59 @@ export default function SettingsTab() {
             small
             variant="secondary"
             icon={exportCopied ? 'check' : 'download'}
-            label={exportCopied ? '복사됨 (메모장에 붙여넣어 보관하세요)' : '데이터 내보내기 (JSON 복사)'}
+            label={exportCopied ? '복사됨 (메모장에 붙여넣어 보관하세요)' : '백업 내보내기 (JSON 복사)'}
             onPress={exportData}
           />
+          <AppText variant="caption" color="secondary">
+            일기는 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업해 두면 그대로 옮길 수 있어요.
+          </AppText>
+          {!restoreOpen ? (
+            <Button
+              small
+              variant="ghost"
+              icon="upload"
+              label="백업 가져오기"
+              onPress={() => setRestoreOpen(true)}
+            />
+          ) : (
+            <Card variant="soft" style={{ gap: spacing.sm }}>
+              <AppText variant="bodySmall" color="secondary">
+                백업 내용을 붙여넣어 주세요. 지금 있는 일기는 지워지지 않고, 없는 것만 추가돼요.
+              </AppText>
+              <TextField
+                placeholder="백업 JSON 붙여넣기"
+                value={restoreText}
+                onChangeText={setRestoreText}
+                multiline
+                autoCapitalize="none"
+                style={{ minHeight: 90, textAlignVertical: 'top' }}
+              />
+              {restoreStatus ? (
+                <AppText variant="caption" color="secondary" accessibilityLiveRegion="polite">
+                  {restoreStatus}
+                </AppText>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Button
+                  small
+                  icon="check"
+                  label="가져오기"
+                  disabled={restoreText.trim().length === 0}
+                  onPress={restoreData}
+                />
+                <Button
+                  small
+                  variant="ghost"
+                  label="닫기"
+                  onPress={() => {
+                    setRestoreOpen(false);
+                    setRestoreStatus(null);
+                    setRestoreText('');
+                  }}
+                />
+              </View>
+            </Card>
+          )}
           <Button
             small
             variant="ghost"
@@ -406,7 +482,7 @@ export default function SettingsTab() {
         <SectionTitle>개발 설정</SectionTitle>
         <Card style={{ gap: spacing.md }}>
           <AppText variant="bodySmall" color="secondary">
-            환경: {getAppEnv()} · AI Provider: {isMockAI() ? 'Mock AI' : 'Anthropic (서버 경유)'} ·
+            환경: {getAppEnv()} · AI 엔진: {isMockAI() ? '내장 AI (무료·오프라인)' : '외부 AI (유료)'} ·
             Supabase: {isSupabaseConfigured() ? '연결됨' : '미연결'}
           </AppText>
           <AppText variant="caption" color="secondary">

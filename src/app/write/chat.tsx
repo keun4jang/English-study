@@ -304,7 +304,7 @@ export default function ChatScreen() {
       <View style={{ flex: 1 }}>
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           <AppText variant="caption" color="secondary">
-            {isMockAI() ? 'Mock AI 모드 · ' : ''}오늘 남은 대화 {turnsLeft}턴
+            {isMockAI() ? '내장 AI · ' : ''}오늘 남은 대화 {turnsLeft}턴
           </AppText>
         </View>
 

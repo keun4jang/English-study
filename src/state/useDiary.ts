@@ -43,6 +43,8 @@ interface DiaryState {
   clearDraft: () => void;
   /** 휴지통 보관 기간이 지난 항목 정리 */
   purgeExpiredTrash: (retentionDays: number) => void;
+  /** 백업에서 일기 추가 (기존 항목은 유지) */
+  importEntries: (entries: DiaryEntry[]) => void;
   /** 계정 삭제 시 전체 데이터 제거 */
   wipeAll: () => void;
 }
@@ -128,6 +130,12 @@ export const useDiary = create<DiaryState>()(
           ),
         }));
       },
+      importEntries: (incoming) =>
+        set((s) => ({
+          entries: [...incoming, ...s.entries].sort((a, b) =>
+            b.localDate.localeCompare(a.localDate),
+          ),
+        })),
       wipeAll: () => set({ entries: [], draft: null }),
     }),
     { name: 'mellow-diary', storage: persistStorage },

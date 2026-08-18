@@ -178,7 +178,7 @@ export default function TodayHome() {
           ) : null}
           {isMockAI() ? (
             <AppText variant="caption" color="secondary">
-              Mock AI 모드 — 실제 AI 연결 전 체험용 응답이에요
+              내장 AI로 동작 중이에요 — 무료이고 인터넷 없이도 쓸 수 있어요
             </AppText>
           ) : null}
         </View>
