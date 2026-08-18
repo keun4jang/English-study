@@ -25,15 +25,16 @@ export function GoalProgress({ total, goal, achieved }: GoalProgressProps) {
   return (
     <Card
       style={{ gap: spacing.sm }}
+      accessible
       accessibilityLabel={
         achieved
-          ? `오늘의 목표 달성. ${goal}문장 중 ${total}문장`
+          ? `오늘의 목표 ${goal}문장을 달성했어요. 오늘 ${total}문장 이야기했어요.`
           : `오늘의 목표 진행 중. ${goal}문장 중 ${total}문장`
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         {achieved ? (
-          <AppIcon name="check-circle" size={18} color="success" decorative={false} />
+          <AppIcon name="check-circle" size={18} color="success" />
         ) : (
           <AppIcon name="target" size={18} color="accent" />
         )}

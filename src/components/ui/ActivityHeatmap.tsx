@@ -47,6 +47,7 @@ export function ActivityHeatmap({ dateKeys, weeks = 12 }: ActivityHeatmapProps) 
   return (
     <View style={{ gap: spacing.sm }}>
       <View
+        accessible
         accessibilityLabel={`최근 ${weeks}주 동안 ${writtenCount}일 기록했어요`}
         style={{ flexDirection: 'row', gap: 3 }}
       >

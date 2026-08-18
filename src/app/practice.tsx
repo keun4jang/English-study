@@ -48,7 +48,7 @@ export default function PracticeScreen() {
             <Card key={item.sentence} style={{ gap: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
                 {done ? (
-                  <AppIcon name="check-circle" size={18} color="success" decorative={false} />
+                  <AppIcon name="check-circle" size={18} color="success" decorative={false} accessibilityLabel="연습 완료" />
                 ) : null}
                 <AppText variant="correctionSentence" color="accent" style={{ flex: 1 }}>
                   {item.sentence}
@@ -81,7 +81,7 @@ export default function PracticeScreen() {
         {completed.size === queue.length ? (
           <Card variant="soft">
             <AppText variant="bodySmall" color="success">
-              오늘의 연습을 모두 마쳤어요. 충분히 잘하고 있어요.
+              오늘의 연습 {queue.length}문장을 모두 마쳤어요.
             </AppText>
           </Card>
         ) : null}

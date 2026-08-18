@@ -48,7 +48,7 @@ export function DiaryCard({ entry, onPress, showDate = true }: DiaryCardProps) {
             </AppText>
           </View>
           {entry.isFavorite ? (
-            <AppIcon name="bookmark" size={16} color="accent" decorative={false} />
+            <AppIcon name="bookmark" size={16} color="accent" decorative={false} accessibilityLabel="즐겨찾기" />
           ) : null}
         </View>
 

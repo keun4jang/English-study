@@ -25,6 +25,8 @@ interface BaseProps {
   color?: ColorName;
   /** 장식용 아이콘이면 true — 스크린리더에서 제외 */
   decorative?: boolean;
+  /** decorative=false일 때 스크린리더가 읽을 라벨 */
+  accessibilityLabel?: string;
 }
 
 function useIconColor(color: ColorName): string {
@@ -46,6 +48,7 @@ export function AppIcon({
   size = 20,
   color = 'secondary',
   decorative = true,
+  accessibilityLabel,
 }: BaseProps & { name: FeatherName }) {
   const iconColor = useIconColor(color);
   return (
@@ -55,6 +58,8 @@ export function AppIcon({
       color={iconColor}
       accessibilityElementsHidden={decorative}
       importantForAccessibility={decorative ? 'no' : 'auto'}
+      accessibilityRole={decorative ? undefined : 'image'}
+      accessibilityLabel={decorative ? undefined : accessibilityLabel}
     />
   );
 }
@@ -65,6 +70,7 @@ export function AppMciIcon({
   size = 20,
   color = 'secondary',
   decorative = true,
+  accessibilityLabel,
 }: BaseProps & { name: MciName }) {
   const iconColor = useIconColor(color);
   return (
@@ -74,6 +80,8 @@ export function AppMciIcon({
       color={iconColor}
       accessibilityElementsHidden={decorative}
       importantForAccessibility={decorative ? 'no' : 'auto'}
+      accessibilityRole={decorative ? undefined : 'image'}
+      accessibilityLabel={decorative ? undefined : accessibilityLabel}
     />
   );
 }

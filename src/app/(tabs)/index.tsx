@@ -96,6 +96,71 @@ export default function TodayHome() {
     });
   };
 
+  // 이어서 하기 카드들 — 우선순위: 초안 > 진행 중 대화 > 말하기 연습 > 복습
+  const nudgeCards: React.ReactElement[] = [];
+  if (draft) {
+    nudgeCards.push(
+      <Card key="draft" style={{ gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AppIcon name="edit-3" size={18} color="accent" />
+          <AppText variant="label">작성 중인 일기가 있어요</AppText>
+        </View>
+        <AppText variant="bodySmall" color="secondary" numberOfLines={2}>
+          {draft.text || '(내용 없음)'}
+        </AppText>
+        <Button
+          size="compact"
+          variant="secondary"
+          label="이어서 쓰기"
+          onPress={() => router.push('/write/text')}
+        />
+      </Card>,
+    );
+  }
+  if (activeConversation) {
+    nudgeCards.push(
+      <Card key="conversation" style={{ gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AppIcon name="message-circle" size={18} color="accent" />
+          <AppText variant="label">진행 중인 AI 대화가 있어요</AppText>
+        </View>
+        <Button size="compact" label="이어서 이야기하기" onPress={() => router.push('/write/chat')} />
+      </Card>,
+    );
+  }
+  if (practiceQueue.length > 0) {
+    nudgeCards.push(
+      <Card key="practice" style={{ gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AppIcon name="mic" size={18} color="accent" />
+          <AppText variant="label">다시 말해볼 문장이 {practiceQueue.length}개 있어요</AppText>
+        </View>
+        <Button
+          size="compact"
+          variant="secondary"
+          label="연습 시작하기"
+          onPress={() => router.push('/practice')}
+        />
+      </Card>,
+    );
+  }
+  if (reviewDue > 0) {
+    nudgeCards.push(
+      <Card key="review" style={{ gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AppIcon name="book-open" size={18} color="accent" />
+          <AppText variant="label">복습할 표현이 {reviewDue}개 있어요</AppText>
+        </View>
+        <Button
+          size="compact"
+          variant="secondary"
+          label="단어장 열기"
+          onPress={() => router.push('/expressions')}
+        />
+      </Card>,
+    );
+  }
+
   return (
     <Screen>
       <View style={{ gap: spacing.x20 }}>
@@ -127,36 +192,8 @@ export default function TodayHome() {
           achieved={progress.achieved}
         />
 
-        {practiceQueue.length > 0 ? (
-          <Card style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <AppIcon name="mic" size={18} color="accent" />
-              <AppText variant="label">
-                다시 말해보기 연습 {practiceQueue.length}문장이 기다리고 있어요
-              </AppText>
-            </View>
-            <Button
-              size="compact"
-              variant="secondary"
-              label="연습 시작하기"
-              onPress={() => router.push('/practice')}
-            />
-          </Card>
-        ) : null}
-
-        {activeConversation ? (
-          <Card style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <AppIcon name="message-circle" size={18} color="accent" />
-              <AppText variant="label">진행 중인 AI 대화가 있어요</AppText>
-            </View>
-            <Button
-              size="compact"
-              label="이어서 이야기하기"
-              onPress={() => router.push('/write/chat')}
-            />
-          </Card>
-        ) : null}
+        {/* 이어서 하기 카드 — 우선순위(초안 > 대화 > 연습 > 복습)로 최대 2개만 노출해 과밀 방지 */}
+        {nudgeCards.slice(0, 2)}
 
         {/* 오늘의 편지 — 대표 카드 (raised) */}
         <Card variant="raised" style={{ gap: spacing.lg }}>
@@ -185,39 +222,6 @@ export default function TodayHome() {
             </View>
           </View>
         </Card>
-
-        {draft ? (
-          <Card style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <AppIcon name="edit-3" size={18} color="accent" />
-              <AppText variant="label">작성 중인 일기가 있어요</AppText>
-            </View>
-            <AppText variant="bodySmall" color="secondary" numberOfLines={2}>
-              {draft.text || '(내용 없음)'}
-            </AppText>
-            <Button
-              size="compact"
-              variant="secondary"
-              label="이어서 쓰기"
-              onPress={() => router.push('/write/text')}
-            />
-          </Card>
-        ) : null}
-
-        {reviewDue > 0 ? (
-          <Card style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <AppIcon name="book-open" size={18} color="accent" />
-              <AppText variant="label">복습할 표현이 {reviewDue}개 있어요</AppText>
-            </View>
-            <Button
-              size="compact"
-              variant="secondary"
-              label="단어장 열기"
-              onPress={() => router.push('/expressions')}
-            />
-          </Card>
-        ) : null}
 
         {/* 오늘의 일기 — 카드 하나 안의 리스트 */}
         <View style={{ gap: spacing.md }}>

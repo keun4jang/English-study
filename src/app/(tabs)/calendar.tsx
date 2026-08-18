@@ -89,7 +89,7 @@ export default function CalendarTab() {
               backgroundColor: pressed ? colors.pressedBackground : 'transparent',
             })}
           >
-            <AppIcon name="chevron-left" size={22} color="primary" decorative={false} />
+            <AppIcon name="chevron-left" size={22} color="primary" />
           </Pressable>
           <AppText variant="heading">
             {year}년 {month}월
@@ -108,7 +108,7 @@ export default function CalendarTab() {
               backgroundColor: pressed ? colors.pressedBackground : 'transparent',
             })}
           >
-            <AppIcon name="chevron-right" size={22} color="primary" decorative={false} />
+            <AppIcon name="chevron-right" size={22} color="primary" />
           </Pressable>
         </View>
 

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { AccessibilityInfo, Pressable, View } from 'react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
@@ -16,7 +16,13 @@ import { useSettings } from '@/state/useSettings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
-type AnswerState = { picked: string; correct: boolean } | null;
+/** 답 확인 중에는 문제/표현을 스냅샷으로 고정한다 (due 재계산으로 다음 문제가 미리 노출되는 것 방지) */
+type AnswerState = {
+  picked: string;
+  correct: boolean;
+  target: SavedExpression;
+  question: QuizQuestion;
+} | null;
 
 /** 숙련 단계 배지 */
 function MasteryBadge({ reviewCount }: { reviewCount: number }) {
@@ -70,24 +76,30 @@ export default function ExpressionsScreen() {
   const [answer, setAnswer] = useState<AnswerState>(null);
   const [doneCount, setDoneCount] = useState(0);
 
-  const currentTarget: SavedExpression | undefined = due[Math.min(quizIndex, due.length - 1)];
-  const question: QuizQuestion | null = useMemo(
-    () => (currentTarget ? buildQuizQuestion(currentTarget, store.expressions) : null),
+  const nextTarget: SavedExpression | undefined = due[Math.min(quizIndex, due.length - 1)];
+  const nextQuestion: QuizQuestion | null = useMemo(
+    () => (nextTarget ? buildQuizQuestion(nextTarget, store.expressions) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentTarget?.id],
+    [nextTarget?.id],
   );
+  // 답 확인 중에는 스냅샷을 렌더링한다
+  const currentTarget = answer ? answer.target : nextTarget;
+  const question = answer ? answer.question : nextQuestion;
 
   const pick = (choice: string) => {
-    if (!question || !currentTarget || answer) return;
-    const correct = choice === question.correctMeaning;
-    setAnswer({ picked: choice, correct });
+    if (!nextQuestion || !nextTarget || answer) return;
+    const correct = choice === nextQuestion.correctMeaning;
+    setAnswer({ picked: choice, correct, target: nextTarget, question: nextQuestion });
+    AccessibilityInfo.announceForAccessibility(
+      correct ? '맞았어요. 다음 복습 간격이 늘어났어요.' : '괜찮아요. 이 표현은 내일 다시 만나요.',
+    );
     if (correct) {
-      store.markKnown(currentTarget.id);
+      store.markKnown(nextTarget.id);
     } else {
-      store.markAgain(currentTarget.id);
+      store.markAgain(nextTarget.id);
     }
-    speak(currentTarget.example || currentTarget.expression, {
-      language: currentTarget.language,
+    speak(nextTarget.example || nextTarget.expression, {
+      language: nextTarget.language,
       rate: speechRate,
     });
   };
@@ -113,7 +125,7 @@ export default function ExpressionsScreen() {
   return (
     <Screen>
       <View style={{ gap: spacing.lg }}>
-        {due.length > 0 && question && currentTarget ? (
+        {(due.length > 0 || answer) && question && currentTarget ? (
           <View style={{ gap: spacing.md }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <AppText variant="heading">오늘의 복습</AppText>
@@ -149,7 +161,17 @@ export default function ExpressionsScreen() {
                     <Pressable
                       key={choice}
                       accessibilityRole="button"
-                      accessibilityLabel={choice}
+                      accessibilityLabel={
+                        answer
+                          ? `${choice}${
+                              choice === question.correctMeaning
+                                ? ', 정답'
+                                : isPicked
+                                  ? ', 내가 고른 답, 오답'
+                                  : ''
+                            }`
+                          : choice
+                      }
                       accessibilityState={{
                         selected: Boolean(isPicked),
                         disabled: Boolean(answer),
@@ -179,9 +201,9 @@ export default function ExpressionsScreen() {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                         {isCorrectChoice ? (
-                          <AppIcon name="check-circle" size={16} color="success" decorative={false} />
+                          <AppIcon name="check-circle" size={16} color="success" />
                         ) : isPicked ? (
-                          <AppIcon name="x-circle" size={16} color="error" decorative={false} />
+                          <AppIcon name="x-circle" size={16} color="error" />
                         ) : null}
                         <AppText variant="body" style={{ flex: 1 }}>
                           {choice}
@@ -204,7 +226,7 @@ export default function ExpressionsScreen() {
                       예문: {currentTarget.example}
                     </AppText>
                   ) : null}
-                  <Button icon="arrow-right" label={due.length > 1 ? '다음 표현' : '복습 끝내기'} onPress={next} />
+                  <Button icon="arrow-right" label={due.length > 0 ? '다음 표현' : '복습 끝내기'} onPress={next} />
                 </View>
               ) : null}
             </Card>
@@ -212,7 +234,9 @@ export default function ExpressionsScreen() {
         ) : (
           <Card variant="soft">
             <AppText variant="bodySmall" color="secondary">
-              오늘 복습할 표현을 모두 봤어요. 내일 또 만나요.
+              {doneCount > 0
+                ? `오늘 ${doneCount}개 표현을 복습했어요.`
+                : '지금 복습할 표현이 없어요. 다음 복습일이 되면 여기에 나타나요.'}
             </AppText>
           </Card>
         )}

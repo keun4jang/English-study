@@ -44,9 +44,9 @@ export function computeDailyProgress(input: {
   today: string;
   goal: number;
 }): DailyProgress {
-  const spoken = input.messages.filter(
-    (m) => m.role === 'user' && isCreatedToday(m.createdAt, input.today),
-  ).length;
+  const spoken = input.messages
+    .filter((m) => m.role === 'user' && isCreatedToday(m.createdAt, input.today))
+    .reduce((sum, m) => sum + countSentences(m.text), 0);
   const written = input.entries
     .filter(
       (e) =>

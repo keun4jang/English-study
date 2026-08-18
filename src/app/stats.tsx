@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { calcStreakGenerous, todayKey } from '@/lib/dates';
+import { countSentences } from '@/lib/goals';
 import { getUsageLimits } from '@/lib/usageLimits';
 import { useChat } from '@/state/useChat';
 import { selectActiveEntries, useDiary } from '@/state/useDiary';
@@ -45,7 +46,7 @@ export default function StatsScreen() {
     [active, today],
   );
   const spokenSentences = useMemo(
-    () => messages.filter((m) => m.role === 'user').length,
+    () => messages.filter((m) => m.role === 'user').reduce((n, m) => n + countSentences(m.text), 0),
     [messages],
   );
   const enCount = active.filter((e) => e.language === 'en').length;
@@ -67,7 +68,8 @@ export default function StatsScreen() {
           <ActivityHeatmap dateKeys={active.map((e) => e.localDate)} />
           {streakInfo.restDaysUsed > 0 ? (
             <AppText variant="caption" color="secondary">
-              연속 기록에는 쉬어간 날(주 1회)이 이어져 있어요.
+              연속 기록에는 쉬어간 날 {streakInfo.restDaysUsed}일이 포함돼 있어요. 7일마다
+              하루는 쉬어도 기록이 이어져요.
             </AppText>
           ) : null}
         </Card>
