@@ -95,11 +95,12 @@ npm run build:web   # Web/PWA 정적 빌드 (dist/)
 
 ## 📱 내 폰에 설치하기 (PWA)
 
-push할 때마다 GitHub Actions가 자동으로 빌드해 **GitHub Pages**에 배포합니다.
+push할 때마다 GitHub Actions가 자동으로 빌드해 `gh-pages` 브랜치로 배포합니다.
 
-1. GitHub 저장소 → **Actions** 탭에서 "Deploy Web (PWA)" 워크플로가 성공했는지 확인
-   (최초 1회는 Settings → Pages에서 Source가 "GitHub Actions"인지 확인)
-2. 폰 브라우저에서 열기: **https://keun4jang.github.io/English-study/**
+1. **최초 1회만**: GitHub 저장소 → **Settings → Pages** → "Build and deployment"에서
+   Source: **Deploy from a branch**, Branch: **gh-pages** / `/(root)` 선택 → Save
+   (GitHub 정책상 이 첫 활성화만은 저장소 주인이 직접 눌러야 해요)
+2. 1~2분 뒤 폰 브라우저에서 열기: **https://keun4jang.github.io/English-study/**
 3. 홈 화면에 추가:
    - **Android (Chrome)**: 메뉴(⋮) → "홈 화면에 추가" 또는 "앱 설치"
    - **iPhone (Safari)**: 공유 버튼(□↑) → "홈 화면에 추가"

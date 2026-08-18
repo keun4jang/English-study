@@ -5,7 +5,8 @@ Apple 개발자 계정 없이도 친구들과 테스트할 수 있는 방법, �
 ## 1. Web/PWA 링크 (가장 쉬움, iPhone 포함 전원 가능) ✅
 
 **자동 배포가 이미 설정되어 있다** (`.github/workflows/deploy-web.yml`):
-브랜치에 push하면 GitHub Actions가 lint/테스트/빌드 후 GitHub Pages에 배포한다.
+브랜치에 push하면 GitHub Actions가 lint/테스트/빌드 후 `gh-pages` 브랜치로 배포한다.
+최초 1회만 Settings → Pages에서 Source: Deploy from a branch / Branch: `gh-pages`를 선택한다.
 
 - 공유할 주소: **https://keun4jang.github.io/English-study/**
 - 새 버전을 push하면 친구 폰의 앱에 "업데이트가 필요해요" 배너가 뜨고,
