@@ -1,0 +1,376 @@
+import * as Clipboard from 'expo-clipboard';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { Linking, Switch, View } from 'react-native';
+
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { OptionGroup } from '@/components/ui/OptionGroup';
+import { Screen } from '@/components/ui/Screen';
+import { TextField } from '@/components/ui/TextField';
+import { VersionFooter } from '@/components/ui/VersionFooter';
+import { isMockAI } from '@/ai';
+import { appConfig, getAppEnv, isSupabaseConfigured } from '@/config/appConfig';
+import { getUsageLimits } from '@/lib/usageLimits';
+import { useAuth } from '@/state/useAuth';
+import { useChat } from '@/state/useChat';
+import { useDiary } from '@/state/useDiary';
+import { useExpressions } from '@/state/useExpressions';
+import { useSettings } from '@/state/useSettings';
+import { useUsage } from '@/state/useUsage';
+import { spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
+
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <AppText variant="heading" style={{ marginTop: spacing.md }}>
+      {children}
+    </AppText>
+  );
+}
+
+function ToggleRow({
+  label,
+  description,
+  value,
+  onChange,
+}: {
+  label: string;
+  description?: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+      <View style={{ flex: 1 }}>
+        <AppText variant="body">{label}</AppText>
+        {description ? (
+          <AppText variant="caption" color="secondary">
+            {description}
+          </AppText>
+        ) : null}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{ true: colors.primary, false: colors.border }}
+        accessibilityLabel={label}
+      />
+    </View>
+  );
+}
+
+export default function SettingsTab() {
+  const settings = useSettings();
+  const auth = useAuth();
+  const diary = useDiary();
+  const chat = useChat();
+  const expressions = useExpressions();
+  const usage = useUsage();
+
+  const [nicknameEdit, setNicknameEdit] = useState('');
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
+  const [exportCopied, setExportCopied] = useState(false);
+  const limits = getUsageLimits();
+
+  /** 데이터 내보내기 — JSON을 클립보드로 복사 (파일 저장은 추후) */
+  const exportData = async () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      app: `${appConfig.appName} v${appConfig.version}`,
+      profile: auth.user,
+      settings: {
+        learning: settings.learning,
+        diary: settings.diary,
+        design: settings.design,
+        notifications: settings.notifications,
+      },
+      diaries: diary.entries,
+      expressions: expressions.expressions,
+    };
+    await Clipboard.setStringAsync(JSON.stringify(payload, null, 2));
+    setExportCopied(true);
+    setTimeout(() => setExportCopied(false), 2500);
+  };
+
+  const deleteAccount = () => {
+    diary.wipeAll();
+    chat.wipeAll();
+    expressions.wipeAll();
+    usage.wipeAll();
+    auth.deleteAccount();
+    settings.resetAll();
+    router.replace('/onboarding');
+  };
+
+  const sendFeedback = () => {
+    const subject = encodeURIComponent(`[${appConfig.appName}] 의견 보내기 (v${appConfig.version})`);
+    Linking.openURL(`mailto:${appConfig.feedbackEmail}?subject=${subject}`).catch(() => {
+      Linking.openURL(`${appConfig.repositoryUrl}/issues`).catch(() => {});
+    });
+  };
+
+  return (
+    <Screen>
+      <View style={{ gap: spacing.lg }}>
+        {/* 계정 */}
+        <SectionTitle>계정</SectionTitle>
+        <Card style={{ gap: spacing.md }}>
+          <AppText variant="body">
+            {auth.user?.nickname}{' '}
+            <AppText variant="caption" color="secondary">
+              ({auth.method === 'demo' ? 'Demo 모드 · 이 기기에만 저장' : '온라인 계정'})
+            </AppText>
+          </AppText>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-end' }}>
+            <View style={{ flex: 1 }}>
+              <TextField placeholder="새 닉네임" value={nicknameEdit} onChangeText={setNicknameEdit} maxLength={20} />
+            </View>
+            <Button
+              small
+              variant="secondary"
+              label="변경"
+              disabled={!nicknameEdit.trim()}
+              onPress={() => {
+                auth.updateNickname(nicknameEdit);
+                setNicknameEdit('');
+              }}
+            />
+          </View>
+          <Button
+            small
+            variant="secondary"
+            label={exportCopied ? '복사됨 ✓ (메모장에 붙여넣어 보관하세요)' : '📦 데이터 내보내기 (JSON 복사)'}
+            onPress={exportData}
+          />
+          <Button
+            small
+            variant="ghost"
+            label="로그아웃"
+            onPress={() => {
+              auth.signOut();
+              router.replace('/login');
+            }}
+          />
+          {!confirmDeleteAccount ? (
+            <Button small variant="ghost" label="계정 및 데이터 삭제" onPress={() => setConfirmDeleteAccount(true)} />
+          ) : (
+            <Card soft style={{ gap: spacing.sm }}>
+              <AppText variant="bodySmall" color="error">
+                모든 일기, 대화, 단어장이 이 기기에서 완전히 삭제돼요. 되돌릴 수 없어요.
+              </AppText>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Button small variant="danger" label="삭제할게요" onPress={deleteAccount} />
+                <Button small variant="ghost" label="취소" onPress={() => setConfirmDeleteAccount(false)} />
+              </View>
+            </Card>
+          )}
+        </Card>
+
+        {/* 학습 */}
+        <SectionTitle>학습</SectionTitle>
+        <Card style={{ gap: spacing.lg }}>
+          <OptionGroup
+            title="학습 언어"
+            options={[
+              { value: 'en', label: '🇺🇸 영어' },
+              { value: 'ja', label: '🇯🇵 일본어' },
+            ]}
+            value={settings.learning.language}
+            onChange={(language) => settings.updateLearning({ language })}
+          />
+          <OptionGroup
+            title="내 실력"
+            options={[
+              { value: 'beginner-zero', label: '처음 시작' },
+              { value: 'beginner', label: '초급' },
+              { value: 'intermediate', label: '중급' },
+              { value: 'advanced', label: '고급' },
+            ]}
+            value={settings.learning.level}
+            onChange={(level) => settings.updateLearning({ level })}
+          />
+          <OptionGroup
+            title="교정 강도"
+            options={[
+              { value: 'gentle', label: '부드럽게' },
+              { value: 'balanced', label: '보통' },
+              { value: 'thorough', label: '꼼꼼하게' },
+            ]}
+            value={settings.learning.correctionIntensity}
+            onChange={(correctionIntensity) => settings.updateLearning({ correctionIntensity })}
+          />
+          <OptionGroup
+            title="교정 타이밍"
+            options={[
+              { value: 'every-turn', label: '말할 때마다' },
+              { value: 'major-only', label: '중요한 오류만' },
+              { value: 'after-conversation', label: '대화 끝난 후' },
+            ]}
+            value={settings.learning.correctionTiming}
+            onChange={(correctionTiming) => settings.updateLearning({ correctionTiming })}
+          />
+          {settings.learning.language === 'ja' ? (
+            <>
+              <OptionGroup
+                title="일본어 말투"
+                options={[
+                  { value: 'polite', label: '정중체 (です/ます)' },
+                  { value: 'casual', label: '캐주얼' },
+                ]}
+                value={settings.learning.japanesePoliteness}
+                onChange={(japanesePoliteness) => settings.updateLearning({ japanesePoliteness })}
+              />
+              <ToggleRow
+                label="읽기 도움 (히라가나)"
+                value={settings.learning.japaneseReadingHelp}
+                onChange={(japaneseReadingHelp) => settings.updateLearning({ japaneseReadingHelp })}
+              />
+            </>
+          ) : null}
+          <OptionGroup
+            title="재말하기 통과 기준"
+            options={[
+              { value: '0.6', label: '너그럽게' },
+              { value: '0.75', label: '보통' },
+              { value: '0.85', label: '엄격하게' },
+            ]}
+            value={String(settings.learning.similarityThreshold) as '0.6' | '0.75' | '0.85'}
+            onChange={(v) => settings.updateLearning({ similarityThreshold: Number(v) })}
+          />
+        </Card>
+
+        {/* 음성 */}
+        <SectionTitle>음성</SectionTitle>
+        <Card style={{ gap: spacing.lg }}>
+          <OptionGroup
+            title="AI 말하기 속도"
+            options={[
+              { value: 'slow', label: '느리게' },
+              { value: 'normal', label: '보통' },
+              { value: 'fast', label: '빠르게' },
+            ]}
+            value={settings.voice.speechRate}
+            onChange={(speechRate) => settings.updateVoice({ speechRate })}
+          />
+          <ToggleRow
+            label="AI 답변 자동 재생"
+            value={settings.voice.autoPlayAiReply}
+            onChange={(autoPlayAiReply) => settings.updateVoice({ autoPlayAiReply })}
+          />
+          <ToggleRow
+            label="음성 원본 저장"
+            description="기본값은 저장 안 함이에요. 음성은 텍스트 변환에만 사용돼요."
+            value={settings.voice.storeVoiceRecordings}
+            onChange={(storeVoiceRecordings) => settings.updateVoice({ storeVoiceRecordings })}
+          />
+        </Card>
+
+        {/* 일기 */}
+        <SectionTitle>일기</SectionTitle>
+        <Card style={{ gap: spacing.lg }}>
+          <OptionGroup
+            title="기본 공개 범위"
+            options={[
+              { value: 'private', label: '🔒 나만 보기', description: '기본값이에요. 공유는 일기별로 직접 선택해요.' },
+              { value: 'selected-friends', label: '선택한 친구' },
+            ]}
+            value={settings.diary.defaultVisibility === 'private' ? 'private' : 'selected-friends'}
+            onChange={(v) => settings.updateDiary({ defaultVisibility: v })}
+          />
+          <ToggleRow
+            label="한국어 번역 표시"
+            value={settings.diary.showKoreanTranslation}
+            onChange={(showKoreanTranslation) => settings.updateDiary({ showKoreanTranslation })}
+          />
+          <Button small variant="secondary" label="🗑 휴지통 보기" onPress={() => router.push('/trash')} />
+        </Card>
+
+        {/* 디자인 */}
+        <SectionTitle>디자인</SectionTitle>
+        <Card style={{ gap: spacing.lg }}>
+          <OptionGroup
+            title="테마"
+            options={[
+              { value: 'system', label: '시스템 연동' },
+              { value: 'light', label: '라이트' },
+              { value: 'dark', label: '다크' },
+            ]}
+            value={settings.design.themeMode}
+            onChange={(themeMode) => settings.updateDesign({ themeMode })}
+          />
+          <OptionGroup
+            title="글자 크기"
+            options={[
+              { value: 'small', label: '작게' },
+              { value: 'normal', label: '보통' },
+              { value: 'large', label: '크게' },
+            ]}
+            value={settings.design.fontScale}
+            onChange={(fontScale) => settings.updateDesign({ fontScale })}
+          />
+          <ToggleRow
+            label="햅틱 진동"
+            value={settings.design.hapticsEnabled}
+            onChange={(hapticsEnabled) => settings.updateDesign({ hapticsEnabled })}
+          />
+          <ToggleRow
+            label="달력을 월요일부터 시작"
+            value={settings.design.calendarStartsOnMonday}
+            onChange={(calendarStartsOnMonday) => settings.updateDesign({ calendarStartsOnMonday })}
+          />
+        </Card>
+
+        {/* 알림 */}
+        <SectionTitle>알림</SectionTitle>
+        <Card style={{ gap: spacing.lg }}>
+          <ToggleRow
+            label="일기 작성 알림"
+            description="기기 로컬 알림으로 제공될 예정이에요 (Phase 2). 죄책감을 주는 문구는 쓰지 않아요."
+            value={settings.notifications.writingReminderEnabled}
+            onChange={(writingReminderEnabled) => settings.updateNotifications({ writingReminderEnabled })}
+          />
+        </Card>
+
+        {/* 개인정보 */}
+        <SectionTitle>개인정보</SectionTitle>
+        <Card style={{ gap: spacing.md }}>
+          <AppText variant="bodySmall" color="secondary">
+            · 일기는 기본으로 비공개예요.{'\n'}· 음성 원본은 기본적으로 저장하지 않아요.{'\n'}· 사진은
+            압축 후 위치 정보(EXIF)가 제거돼요.{'\n'}· AI 교정을 사용하면 입력한 텍스트가 서버와 AI
+            제공자(Anthropic)에 전송될 수 있어요. 민감한 개인정보(주민번호, 주소 등)는 일기에 쓰지
+            않는 것이 좋아요.{'\n'}· 종단간 암호화는 아직 제공되지 않아요.
+          </AppText>
+        </Card>
+
+        {/* 의견 보내기 & 정보 */}
+        <SectionTitle>지원</SectionTitle>
+        <Card style={{ gap: spacing.md }}>
+          <Button small variant="secondary" label="💌 의견 보내기" onPress={sendFeedback} />
+          <Button small variant="secondary" label="ℹ️ 앱 정보 및 버전" onPress={() => router.push('/about')} />
+        </Card>
+
+        {/* 개발자/관리자 */}
+        <SectionTitle>개발 설정</SectionTitle>
+        <Card style={{ gap: spacing.md }}>
+          <AppText variant="bodySmall" color="secondary">
+            환경: {getAppEnv()} · AI Provider: {isMockAI() ? 'Mock AI 🧪' : 'Anthropic (서버 경유)'} ·
+            Supabase: {isSupabaseConfigured() ? '연결됨' : '미연결'}
+          </AppText>
+          <AppText variant="caption" color="secondary">
+            일일 한도 — AI 대화 {limits.dailyAiTurns}턴 · 일기 완성 {limits.dailyDiaryGenerations}회 ·
+            입력 {limits.maxInputChars.toLocaleString()}자
+          </AppText>
+          <ToggleRow
+            label="상세 오류 표시 (개발용)"
+            value={settings.dev.showDetailedErrors}
+            onChange={(showDetailedErrors) => settings.updateDev({ showDetailedErrors })}
+          />
+        </Card>
+      </View>
+      <VersionFooter />
+    </Screen>
+  );
+}

@@ -1,0 +1,67 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+import { ChatMessage, Conversation, CorrectionResult, LearningLanguage } from '@/domain/types';
+import { todayKey } from '@/lib/dates';
+import { newId } from '@/lib/id';
+import { persistStorage } from './storage';
+
+interface ChatState {
+  conversations: Conversation[];
+  messages: ChatMessage[];
+  startConversation: (ownerId: string, language: LearningLanguage) => Conversation;
+  addMessage: (input: {
+    conversationId: string;
+    role: 'user' | 'assistant';
+    text: string;
+    translationKo?: string | null;
+    correction?: CorrectionResult | null;
+  }) => ChatMessage;
+  finishConversation: (id: string) => void;
+  messagesFor: (conversationId: string) => ChatMessage[];
+  wipeAll: () => void;
+}
+
+export const useChat = create<ChatState>()(
+  persist(
+    (set, get) => ({
+      conversations: [],
+      messages: [],
+      startConversation: (ownerId, language) => {
+        const conversation: Conversation = {
+          id: newId(),
+          ownerId,
+          language,
+          localDate: todayKey(),
+          status: 'active',
+          createdAt: new Date().toISOString(),
+        };
+        set((s) => ({ conversations: [conversation, ...s.conversations] }));
+        return conversation;
+      },
+      addMessage: (input) => {
+        const message: ChatMessage = {
+          id: newId(),
+          conversationId: input.conversationId,
+          role: input.role,
+          text: input.text,
+          translationKo: input.translationKo ?? null,
+          correction: input.correction ?? null,
+          createdAt: new Date().toISOString(),
+        };
+        set((s) => ({ messages: [...s.messages, message] }));
+        return message;
+      },
+      finishConversation: (id) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === id ? { ...c, status: 'finished' as const } : c,
+          ),
+        })),
+      messagesFor: (conversationId) =>
+        get().messages.filter((m) => m.conversationId === conversationId),
+      wipeAll: () => set({ conversations: [], messages: [] }),
+    }),
+    { name: 'mellow-chat', storage: persistStorage },
+  ),
+);
