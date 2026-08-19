@@ -85,3 +85,32 @@ export async function applyWebUpdate(): Promise<void> {
   }
   window.location.reload();
 }
+
+/**
+ * Web/PWA: 저장된 앱 파일을 전부 버리고 처음부터 다시 받는다.
+ *
+ * 서비스 워커가 옛 파일을 붙들고 있으면 업데이트를 눌러도 화면이 그대로일 수 있다.
+ * (앱 이름이나 아이콘이 바뀌지 않는 경우가 대표적이다.)
+ *
+ * **일기·설정은 지우지 않는다.** 이것들은 캐시가 아니라 별도 저장소에 있고, 여기서는
+ * 서비스 워커 등록과 파일 캐시만 지운다.
+ */
+export async function resetAppCache(): Promise<void> {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return;
+
+  try {
+    const registrations = await navigator.serviceWorker?.getRegistrations();
+    await Promise.all((registrations ?? []).map((r) => r.unregister()));
+  } catch {
+    // 등록 해제에 실패해도 캐시 삭제는 계속 시도한다
+  }
+
+  try {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+  } catch {
+    // 캐시 API가 막혀 있으면 새로고침만이라도 한다
+  }
+
+  window.location.reload();
+}

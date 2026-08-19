@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Linking, Switch, View } from 'react-native';
+import { Linking, Platform, Switch, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +13,7 @@ import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isBuiltInAI } from '@/ai';
 import { appConfig, getAppEnv, isSupabaseConfigured } from '@/config/appConfig';
 import { buildBackup, parseBackup } from '@/lib/backup';
-import { applyWebUpdate, checkForUpdate } from '@/lib/updates';
+import { applyWebUpdate, checkForUpdate, resetAppCache } from '@/lib/updates';
 import { getUsageLimits } from '@/lib/usageLimits';
 import { useAuth } from '@/state/useAuth';
 import { useChat } from '@/state/useChat';
@@ -473,6 +473,22 @@ export default function SettingsTab() {
           ) : null}
           {updateReady ? (
             <Button small label="지금 업데이트" onPress={() => applyWebUpdate()} />
+          ) : null}
+          {Platform.OS === 'web' ? (
+            <>
+              <Button
+                size="compact"
+                variant="ghost"
+                icon="rotate-ccw"
+                label="앱 파일 새로 받기"
+                onPress={() => resetAppCache()}
+                accessibilityHint="저장된 앱 파일만 지우고 다시 받습니다. 일기와 설정은 지워지지 않습니다"
+              />
+              <AppText variant="caption" color="secondary">
+                업데이트를 눌러도 앱 이름·아이콘이나 화면이 그대로라면 눌러 주세요. 저장된 앱
+                파일만 지우고 새로 받습니다 — 일기와 설정은 지워지지 않아요.
+              </AppText>
+            </>
           ) : null}
           <Button small variant="secondary" icon="mail" label="의견 보내기" onPress={sendFeedback} />
           <Button small variant="secondary" icon="info" label="앱 정보 및 버전" onPress={() => router.push('/about')} />

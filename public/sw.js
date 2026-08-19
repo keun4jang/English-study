@@ -13,6 +13,10 @@ const APP_VERSION = '__APP_VERSION__';
 const CACHE_NAME = 'dlog-v' + APP_VERSION;
 
 self.addEventListener('install', (event) => {
+  // 기다리지 않고 바로 새 워커로 교체한다.
+  // 예전에는 모든 창이 닫힐 때까지 옛 워커가 계속 응답했는데, 그 사이 옛 manifest가
+  // 서빙되면서 홈 화면에 옛 앱 이름이 박히는 문제가 있었다.
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
       cache.addAll([
@@ -52,8 +56,11 @@ self.addEventListener('fetch', (event) => {
 
   const isNavigation = req.mode === 'navigate';
   const isVersionFile = url.pathname.endsWith('/version.json');
+  // manifest는 앱 이름·아이콘의 원본이다. 캐시에서 주면 이름을 바꿔도 홈 화면에
+  // 옛 이름이 그대로 박힌다(재설치해도 안 바뀐다). 반드시 네트워크를 먼저 본다.
+  const isManifest = url.pathname.endsWith('/manifest.json');
 
-  if (isNavigation || isVersionFile) {
+  if (isNavigation || isVersionFile || isManifest) {
     // network-first: 항상 최신 확인, 오프라인이면 캐시
     event.respondWith(
       fetch(req)
