@@ -1,6 +1,6 @@
-import { router, useNavigation } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { getAIProvider, isBuiltInAI } from '@/ai';
 import { ChatBubble } from '@/components/diary/ChatBubble';
@@ -9,6 +9,7 @@ import { SpeakPractice } from '@/components/diary/SpeakPractice';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ExitConfirmDialog } from '@/components/ui/ExitConfirmDialog';
 import { IconButton } from '@/components/ui/IconButton';
 import { InkLoading } from '@/components/ui/InkLoading';
 import { Screen } from '@/components/ui/Screen';
@@ -17,6 +18,7 @@ import { CorrectionResult } from '@/domain/types';
 import { todayKey } from '@/lib/dates';
 import { newId } from '@/lib/id';
 import { checkAiTurnAllowed, checkDiaryGenerationAllowed, getUsageLimits } from '@/lib/usageLimits';
+import { useUnsavedExit } from '@/lib/useUnsavedExit';
 import { getSttAdapter } from '@/speech/stt';
 import { speak, stopSpeaking } from '@/speech/tts';
 import { useAuth } from '@/state/useAuth';
@@ -26,10 +28,8 @@ import { useFinalize } from '@/state/useFinalize';
 import { useSettings } from '@/state/useSettings';
 import { useUsage } from '@/state/useUsage';
 import { spacing } from '@/theme/tokens';
-import { useTheme } from '@/theme/useTheme';
 
 export default function ChatScreen() {
-  const { colors } = useTheme();
   const user = useAuth((s) => s.user);
   const learning = useSettings((s) => s.learning);
   const voice = useSettings((s) => s.voice);
@@ -50,9 +50,7 @@ export default function ChatScreen() {
   const [practiceTarget, setPracticeTarget] = useState<string | null>(null);
   const [limitMessage, setLimitMessage] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
-  const [exitAction, setExitAction] = useState<object | null>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const navigation = useNavigation();
   const sttSupported = getSttAdapter().isSupported();
 
   const allMessages = useChat((s) => s.messages);
@@ -106,30 +104,8 @@ export default function ChatScreen() {
   const conversation = useChat((s) => s.conversations.find((c) => c.id === conversationId));
   const hasUnsaved =
     conversation?.status === 'active' && messages.some((m) => m.role === 'user') && !finishing;
-  const hasUnsavedRef = useRef(false);
-  useEffect(() => {
-    hasUnsavedRef.current = hasUnsaved;
-  }, [hasUnsaved]);
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!hasUnsavedRef.current) return;
-      e.preventDefault();
-      setExitAction(e.data.action);
-    });
-    return unsubscribe;
-  }, [navigation]);
-
-  const confirmExit = () => {
-    const action = exitAction;
-    setExitAction(null);
-    hasUnsavedRef.current = false; // 이번 나가기는 통과 (대화는 보관되어 이어서 할 수 있음)
-    if (action) {
-      // @ts-expect-error react-navigation action 타입은 라우터 내부 타입과 호환됨
-      navigation.dispatch(action);
-    } else {
-      router.back();
-    }
-  };
+  // 화면 안 뒤로가기 · 안드로이드 뒤로가기 · 브라우저 뒤로가기를 한 곳에서 받는다
+  const exit = useUnsavedExit(hasUnsaved);
 
   const savedExpressionSet = useMemo(
     () => new Set(expressions.expressions.map((e) => e.expression)),
@@ -454,42 +430,19 @@ export default function ChatScreen() {
         onClose={() => setPracticeTarget(null)}
       />
 
-      {/* 나가기 확인 팝업 */}
-      <Modal
-        visible={exitAction !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setExitAction(null)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: colors.overlay,
-            justifyContent: 'center',
-            padding: spacing.lg,
-          }}
-        >
-          <Card style={{ gap: spacing.md }}>
-            <AppText variant="subheading">대화를 마칠까요?</AppText>
-            <AppText variant="bodySmall" color="secondary">
-              지금까지의 대화로 일기를 만들 수 있어요. 그냥 나가도 대화는 사라지지 않고,
-              오늘 홈에서 이어서 이야기할 수 있어요.
-            </AppText>
-            <View style={{ gap: spacing.sm }}>
-              <Button
-                icon="mail"
-                label="일기 만들고 저장하기"
-                onPress={() => {
-                  setExitAction(null);
-                  finishAndCreateDiary();
-                }}
-              />
-              <Button variant="secondary" label="나가기 (대화는 보관돼요)" onPress={confirmExit} />
-              <Button variant="ghost" label="계속 이야기하기" onPress={() => setExitAction(null)} />
-            </View>
-          </Card>
-        </View>
-      </Modal>
+      <ExitConfirmDialog
+        visible={exit.pending}
+        title="대화를 마칠까요?"
+        description="지금까지의 대화로 일기를 만들 수 있어요. 저장하지 않고 나가도 대화는 사라지지 않고, 홈에서 이어서 이야기할 수 있어요."
+        saveLabel="일기 만들고 저장하기"
+        onSave={() => {
+          exit.cancel();
+          finishAndCreateDiary();
+        }}
+        discardLabel="저장 안 하고 나가기"
+        onDiscard={exit.confirm}
+        onCancel={exit.cancel}
+      />
     </Screen>
   );
 }

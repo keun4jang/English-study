@@ -7,11 +7,13 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmotionPicker } from '@/components/ui/EmotionPicker';
+import { ExitConfirmDialog } from '@/components/ui/ExitConfirmDialog';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { DiaryPhoto, Emotion } from '@/domain/types';
 import { pickAndCompressPhotos } from '@/lib/photos';
 import { getUsageLimits } from '@/lib/usageLimits';
+import { useUnsavedExit } from '@/lib/useUnsavedExit';
 import { useAuth } from '@/state/useAuth';
 import { useDiary } from '@/state/useDiary';
 import { useSettings } from '@/state/useSettings';
@@ -88,10 +90,16 @@ export default function TextWriteScreen() {
       inputMethod: 'typed',
     });
     diary.clearDraft();
-    router.replace({ pathname: '/diary/[id]', params: { id: entry.id } });
+    exit.leaveWithoutAsking(() =>
+      router.replace({ pathname: '/diary/[id]', params: { id: entry.id } }),
+    );
   };
 
   const overLimit = text.length > limits.maxDiaryChars;
+
+  // 쓰던 게 있으면 뒤로가기로 그냥 빠져나가지 않게 한다.
+  // (임시 저장이 돌고 있어 내용이 사라지진 않지만, 사용자가 그걸 알 수 없다)
+  const exit = useUnsavedExit(Boolean(text.trim() || title.trim()));
 
   return (
     <Screen>
@@ -178,6 +186,17 @@ export default function TextWriteScreen() {
 
         <Button label="저장하기" onPress={save} disabled={!text.trim() || overLimit} />
       </View>
+
+      <ExitConfirmDialog
+        visible={exit.pending}
+        title="쓰던 일기를 저장할까요?"
+        description="저장하지 않고 나가도 쓰던 내용은 임시 보관돼요. 홈에서 이어서 쓸 수 있어요."
+        saveLabel="저장하고 나가기"
+        onSave={save}
+        discardLabel="저장 안 하고 나가기"
+        onDiscard={exit.confirm}
+        onCancel={exit.cancel}
+      />
     </Screen>
   );
 }

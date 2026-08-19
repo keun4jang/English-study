@@ -6,9 +6,11 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { EmotionPicker } from '@/components/ui/EmotionPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ExitConfirmDialog } from '@/components/ui/ExitConfirmDialog';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { getUsageLimits } from '@/lib/usageLimits';
+import { useUnsavedExit } from '@/lib/useUnsavedExit';
 import { useDiary } from '@/state/useDiary';
 import { spacing } from '@/theme/tokens';
 
@@ -22,6 +24,15 @@ export default function DiaryEdit() {
   const [emotion, setEmotion] = useState(entry?.emotion ?? 'neutral');
   const [tagsInput, setTagsInput] = useState(entry?.tags.join(', ') ?? '');
   const limits = getUsageLimits();
+
+  // 수정 화면은 임시 저장이 없다. 뒤로가기로 나가면 고친 내용이 그대로 사라지므로 물어본다.
+  const dirty =
+    entry !== undefined &&
+    (title !== (entry.title ?? '') ||
+      text !== entry.finalText ||
+      emotion !== entry.emotion ||
+      tagsInput !== entry.tags.join(', '));
+  const exit = useUnsavedExit(dirty);
 
   if (!entry) {
     return (
@@ -38,7 +49,8 @@ export default function DiaryEdit() {
       emotion,
       tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
     });
-    router.back();
+    // 저장했으니 다시 물어보지 않고 나간다
+    exit.leaveWithoutAsking(() => router.back());
   };
 
   return (
@@ -69,6 +81,17 @@ export default function DiaryEdit() {
           disabled={!text.trim() || text.length > limits.maxDiaryChars}
         />
       </View>
+
+      <ExitConfirmDialog
+        visible={exit.pending}
+        title="고친 내용을 저장할까요?"
+        description="저장하지 않고 나가면 방금 고친 내용은 사라지고, 원래 일기가 그대로 남아요."
+        saveLabel="저장하고 나가기"
+        onSave={save}
+        discardLabel="저장 안 하고 나가기"
+        onDiscard={exit.confirm}
+        onCancel={exit.cancel}
+      />
     </Screen>
   );
 }
