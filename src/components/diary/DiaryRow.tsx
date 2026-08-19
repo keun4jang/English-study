@@ -42,7 +42,7 @@ export function DiaryRow({ entry, onPress, showDivider }: DiaryRowProps) {
     >
       <EmotionIcon emotion={entry.emotion} size={24} />
       <View style={{ flex: 1, gap: 2 }}>
-        <AppText variant="bodyMedium" numberOfLines={1}>
+        <AppText variant="bodyStrong" numberOfLines={1}>
           {preview}
         </AppText>
         <AppText variant="caption" color="secondary">

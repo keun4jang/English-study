@@ -52,7 +52,28 @@ if (fs.existsSync(swPath)) {
 const htmlPath = path.join(dist, 'index.html');
 let html = fs.readFileSync(htmlPath, 'utf8');
 
+// SUIT — 로컬 woff2만 사용한다. 외부 CDN(Google Fonts 등)을 호출하지 않으므로
+// 오프라인에서도 폰트가 뜨고, 외부 서비스 장애나 과금에 영향받지 않는다.
+// 하나의 family에 굵기 3개를 등록한다(굵기별로 family를 나누면 브라우저가 가짜 볼드를
+// 덧씌운다). 앱 토큰은 fontFamily:'SUIT' + fontWeight로 굵기를 고른다.
+const fontFaces = [
+  [400, 'suit-regular'],
+  [600, 'suit-semibold'],
+  [700, 'suit-bold'],
+]
+  .map(
+    ([weight, file]) => `@font-face{font-family:"SUIT";` +
+      `src:url("./fonts/${file}.woff2") format("woff2");` +
+      // 폰트를 받는 동안 글자가 사라지지 않도록(FOIT 방지) 시스템 폰트로 먼저 보여 준다
+      `font-weight:${weight};font-style:normal;font-display:swap;}`,
+  )
+  .join('');
+
 const headTags = [
+  // 첫 화면에서 바로 쓰는 두 굵기만 미리 받는다. Bold까지 preload하면 초기 네트워크 경쟁이 커진다.
+  '<link rel="preload" href="./fonts/suit-regular.woff2" as="font" type="font/woff2" crossorigin/>',
+  '<link rel="preload" href="./fonts/suit-semibold.woff2" as="font" type="font/woff2" crossorigin/>',
+  `<style>${fontFaces}</style>`,
   '<link rel="manifest" href="./manifest.json"/>',
   '<meta name="theme-color" content="#E0A82E"/>',
   '<link rel="apple-touch-icon" href="./icons/icon-180.png"/>',
@@ -81,4 +102,14 @@ fs.writeFileSync(htmlPath, html);
 // 4. SPA 라우팅용 404.html (GitHub Pages에서 새로고침/딥링크 시 index로 서빙)
 fs.copyFileSync(htmlPath, path.join(dist, '404.html'));
 
-console.log(`PWA 후처리 완료 — v${version} (manifest/sw/version.json/404 주입)`);
+// 폰트가 빠지면 조용히 시스템 폰트로 떨어져 눈치채기 어렵다 — 빌드에서 바로 잡는다
+const requiredFonts = ['suit-regular.woff2', 'suit-semibold.woff2', 'suit-bold.woff2'];
+const missingFonts = requiredFonts.filter(
+  (name) => !fs.existsSync(path.join(dist, 'fonts', name)),
+);
+if (missingFonts.length > 0) {
+  console.error(`오류: dist/fonts에 폰트가 없습니다 — ${missingFonts.join(', ')}`);
+  process.exit(1);
+}
+
+console.log(`PWA 후처리 완료 — v${version} (manifest/sw/version.json/404/폰트 주입)`);

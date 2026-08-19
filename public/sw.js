@@ -14,7 +14,16 @@ const CACHE_NAME = 'dlog-v' + APP_VERSION;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(['./', './manifest.json'])),
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll([
+        './',
+        './manifest.json',
+        // 폰트를 미리 받아 둬야 오프라인에서 처음 열 때도 글자가 시스템 폰트로 안 튄다
+        './fonts/suit-regular.woff2',
+        './fonts/suit-semibold.woff2',
+        './fonts/suit-bold.woff2',
+      ]),
+    ),
   );
 });
 

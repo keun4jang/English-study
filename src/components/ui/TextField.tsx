@@ -42,6 +42,10 @@ export function TextField({ label, error, containerStyle, style, onFocus, onBlur
             paddingHorizontal: spacing.lg,
             paddingVertical: spacing.md,
             fontSize: typography.body.fontSize,
+            // TextInput은 AppText를 거치지 않아서 폰트를 직접 지정해야 한다.
+            // 안 하면 입력창 글자만 시스템 폰트로 튄다.
+            fontFamily: typography.body.fontFamily,
+            lineHeight: typography.body.lineHeight,
             color: colors.textPrimary,
             minHeight: 48,
           },

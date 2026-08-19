@@ -8,7 +8,7 @@
 틀린 표현을 부담스럽지 않게 고쳐 주며, 마지막에는 오늘의 대화가 하나의 예쁜 외국어
 일기로 완성됩니다.
 
-**현재 버전: v0.6.x** · 외부 서비스 없이 기기 안에서 완전히 동작합니다 (영구 무료)
+**현재 버전: v0.7.x** · 외부 서비스 없이 기기 안에서 완전히 동작합니다 (영구 무료)
 
 ## 주요 기능
 
@@ -25,6 +25,7 @@
 ## 기술 스택
 
 - **앱**: Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript(strict) · Zustand · Zod
+- **폰트**: SUIT(한국어·UI) + Lora(영어 일기) — 둘 다 SIL OFL 1.1, 앱에 번들(런타임 CDN 호출 없음)
 - **음성**: expo-speech(TTS), Web Speech API(STT, 브라우저) + 플랫폼 Adapter
 - **백엔드(Phase 2)**: Supabase (Auth / PostgreSQL + RLS / Storage / Edge Functions)
 - **AI**: 내장 규칙 엔진(`src/ai/rules/`) + 주제 사전(`src/ai/topics.ts`) — 외부 API 호출 없음.

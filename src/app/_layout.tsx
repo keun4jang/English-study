@@ -1,4 +1,4 @@
-import { Lora_500Medium, Lora_600SemiBold, useFonts } from '@expo-google-fonts/lora';
+import { Lora_400Regular, Lora_600SemiBold, useFonts } from '@expo-google-fonts/lora';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
@@ -71,9 +71,11 @@ function RootStack() {
 
 export default function RootLayout() {
   const hydrated = useHydrated();
-  // 영어 일기용 세리프(Lora)만 번들 — 로딩 실패 시 시스템 폰트로 계속 진행
+  // 영어 일기용 세리프(Lora)만 여기서 로드한다. 한국어 UI의 SUIT는 웹 전용이라
+  // @font-face로 넣기 때문에(scripts/postbuild-web.js) 여기서 다루지 않는다.
+  // 로딩에 실패해도 시스템 폰트로 계속 진행한다 — 폰트 때문에 앱이 멈추면 안 된다.
   const [fontsLoaded, fontError] = useFonts({
-    Lora_500Medium,
+    Lora_400Regular,
     Lora_600SemiBold,
   });
   const ready = hydrated && (fontsLoaded || Boolean(fontError));

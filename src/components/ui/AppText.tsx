@@ -56,6 +56,7 @@ export function AppText({
           lineHeight: base.lineHeight * fontScale,
           fontWeight: weight ?? base.fontWeight,
           fontFamily: base.fontFamily,
+          letterSpacing: base.letterSpacing,
           color: colorMap[color],
           textAlign: align,
         },

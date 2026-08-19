@@ -173,13 +173,32 @@ export const radius = {
 
 /**
  * 폰트 패밀리.
- * - UI(한국어): 시스템 폰트 (Noto Sans KR 번들은 웨이트당 수 MB라 PWA 로딩 저하 → 제외)
- * - 영어 일기: Lora (번들, @expo-google-fonts/lora — 무료)
- * - 일본어 일기: 플랫폼 세리프 fallback (Noto Serif JP 번들은 4MB+/웨이트 → 제외)
+ *
+ * 규칙은 **언어별이 아니라 역할별**로 나눈다.
+ * - 조작하고 학습하는 영역(버튼·대화·교정 카드·설정)은 전부 산세리프 하나로 통일한다.
+ *   교정 카드의 영어 문장도 세리프를 쓰지 않는다.
+ * - 완성되어 보관되는 문서(일기)만 세리프를 쓴다.
+ * 그래서 "대화가 일기로 완성됐다"는 변화가 폰트로도 드러난다.
+ *
+ * SUIT는 UI 본문용으로 만들어진 한글 폰트라 한글·라틴 수직 정렬이 안정적이고,
+ * 웨이트당 약 167KB로 작다.
+ *
+ * 굵기별로 family를 나누지 않고 하나의 'SUIT' family에 400/600/700을 등록한다.
+ * 나눠 두면 SemiBold family에 fontWeight 600이 겹쳐 들어가 브라우저가 가짜 볼드를
+ * 덧씌운다(획이 두꺼워지고 지저분해진다).
+ *
+ * 네이티브(Expo Go/개발 빌드)에는 SUIT를 아직 넣지 않았다 — TTF는 웨이트당 590KB라
+ * 지금 배포 형태(PWA)에 필요 없는 1.7MB를 저장소에 넣게 된다. 네이티브에서는
+ * undefined가 되어 시스템 폰트로 안전하게 내려간다.
  */
+const UI_FONT = Platform.OS === 'web' ? 'SUIT' : undefined;
+
 export const fonts = {
-  sans: undefined as string | undefined, // 시스템 기본
-  serifEn: 'Lora_500Medium',
+  /** 한국어·영어 UI 공통 (대화·교정 카드 포함) */
+  ui: UI_FONT,
+  /** @deprecated ui 사용 */
+  sans: UI_FONT,
+  serifEn: 'Lora_400Regular',
   serifEnBold: 'Lora_600SemiBold',
   serifJa: Platform.select({
     ios: 'Hiragino Mincho ProN',
@@ -193,23 +212,39 @@ interface TypeToken {
   lineHeight: number;
   fontWeight: TextStyle['fontWeight'];
   fontFamily?: string;
+  letterSpacing?: number;
 }
 
+/**
+ * 실제 크기 단계는 13 / 14 / 16 / 18 / 22 / 26 / 30 일곱 개로 정리했다(일기 24는 예외).
+ * 이전에는 21과 17이 있었는데 각각 18·26, 16 사이에서 차이가 잘 안 보였다.
+ *
+ * 자간은 한글에서 특히 중요하다. SUIT는 자체 자간이 이미 촘촘해서 큰 음수 자간을 더하면
+ * 답답해지고, 16px 이하에서 음수를 크게 주면 다크 모드·저해상도 Android에서 획이 뭉친다.
+ * 그래서 큰 글자에만 살짝 좁히고 본문 이하는 0에 둔다.
+ */
 export const typography: Record<string, TypeToken> = {
   /** 홈 인사말 등 제한된 영역 전용 */
-  display: { fontSize: 30, lineHeight: 40, fontWeight: '600' },
-  title: { fontSize: 26, lineHeight: 36, fontWeight: '700' },
-  heading: { fontSize: 21, lineHeight: 30, fontWeight: '700' },
-  subheading: { fontSize: 17, lineHeight: 26, fontWeight: '600' },
-  body: { fontSize: 16, lineHeight: 27, fontWeight: '400' },
-  bodyMedium: { fontSize: 16, lineHeight: 27, fontWeight: '500' },
-  bodySmall: { fontSize: 14, lineHeight: 22, fontWeight: '400' },
-  label: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
-  caption: { fontSize: 13, lineHeight: 19, fontWeight: '400' },
+  display: { fontSize: 30, lineHeight: 40, fontWeight: '600', fontFamily: fonts.ui, letterSpacing: -0.45 },
+  title: { fontSize: 26, lineHeight: 36, fontWeight: '700', fontFamily: fonts.ui, letterSpacing: -0.35 },
+  heading: { fontSize: 22, lineHeight: 30, fontWeight: '700', fontFamily: fonts.ui, letterSpacing: -0.2 },
+  subheading: { fontSize: 18, lineHeight: 26, fontWeight: '600', fontFamily: fonts.ui, letterSpacing: -0.1 },
+  body: { fontSize: 16, lineHeight: 26, fontWeight: '400', fontFamily: fonts.ui },
+  /** 강조 본문 — 긴 문단 전체가 아니라 강조 문장·인터랙션 텍스트에만 */
+  bodyStrong: { fontSize: 16, lineHeight: 26, fontWeight: '600', fontFamily: fonts.ui },
+  bodySmall: { fontSize: 14, lineHeight: 22, fontWeight: '400', fontFamily: fonts.ui },
+  label: { fontSize: 14, lineHeight: 20, fontWeight: '600', fontFamily: fonts.ui },
+  caption: { fontSize: 13, lineHeight: 18, fontWeight: '400', fontFamily: fonts.ui, letterSpacing: 0.05 },
   /** 완성 일기 제목/본문 — 언어별 세리프는 DiaryText에서 적용 */
-  diaryTitle: { fontSize: 24, lineHeight: 34, fontWeight: '600' },
+  diaryTitle: { fontSize: 24, lineHeight: 34, fontWeight: '600', letterSpacing: -0.15 },
   diaryBody: { fontSize: 18, lineHeight: 31, fontWeight: '400' },
-  correctionSentence: { fontSize: 17, lineHeight: 28, fontWeight: '500' },
+  /**
+   * 교정 문장 — 학습 인터페이스이지 문서가 아니므로 세리프를 쓰지 않는다.
+   * 크기보다 줄간격과 굵기로 구분한다.
+   */
+  correctionSentence: { fontSize: 16, lineHeight: 28, fontWeight: '600', fontFamily: fonts.ui },
+  /** @deprecated bodyStrong 사용 — 웨이트 500을 줄이기 위해 통합 */
+  bodyMedium: { fontSize: 16, lineHeight: 26, fontWeight: '600', fontFamily: fonts.ui },
 };
 
 export type TypographyVariant = keyof typeof typography;
