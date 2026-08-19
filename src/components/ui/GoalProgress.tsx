@@ -62,7 +62,7 @@ export function GoalProgress({ total, goal, achieved }: GoalProgressProps) {
             width: `${Math.round(ratio * 100)}%`,
             height: '100%',
             borderRadius: radius.pill,
-            backgroundColor: achieved ? colors.success : colors.primary,
+            backgroundColor: achieved ? colors.success : colors.primaryBorder,
           }}
         />
       </View>

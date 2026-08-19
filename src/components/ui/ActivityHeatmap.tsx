@@ -63,7 +63,7 @@ export function ActivityHeatmap({ dateKeys, weeks = 12 }: ActivityHeatmapProps) 
                   borderRadius: 3,
                   backgroundColor: cell.written ? colors.primary : colors.surfaceSoft,
                   borderWidth: cell.isToday ? 1.5 : cell.written ? 0 : 1,
-                  borderColor: cell.isToday ? colors.primary : colors.border,
+                  borderColor: cell.isToday ? colors.primaryBorder : colors.border,
                 }}
               />
             ))}

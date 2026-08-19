@@ -30,7 +30,7 @@ export function IconButton({
     secondary: colors.primarySoft,
     ghost: 'transparent',
   };
-  const iconColor = variant === 'primary' ? colors.onPrimary : colors.primary;
+  const iconColor = variant === 'primary' ? colors.onPrimary : colors.primaryInk;
 
   return (
     <Pressable

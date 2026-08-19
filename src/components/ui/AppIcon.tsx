@@ -34,7 +34,7 @@ function useIconColor(color: ColorName): string {
   const map: Record<ColorName, string> = {
     primary: colors.textPrimary,
     secondary: colors.textSecondary,
-    accent: colors.primary,
+    accent: colors.primaryInk,
     onPrimary: colors.onPrimary,
     error: colors.error,
     success: colors.success,

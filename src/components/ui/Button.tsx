@@ -60,7 +60,7 @@ export function Button({
     variant === 'primary' || variant === 'danger'
       ? colors.onPrimary
       : variant === 'secondary'
-        ? colors.primary
+        ? colors.primaryInk
         : colors.textSecondary;
 
   return (
@@ -83,8 +83,9 @@ export function Button({
           flexDirection: 'row',
           gap: spacing.sm,
           opacity: disabled ? 0.55 : 1,
-          borderWidth: variant === 'ghost' ? 1 : 0,
-          borderColor: colors.border,
+          // 노란 채움 버튼은 크림 배경 위에서 경계가 흐려진다 — 진한 금색 테두리로 형태를 지킨다
+          borderWidth: variant === 'ghost' || variant === 'primary' ? 1 : 0,
+          borderColor: variant === 'primary' ? colors.primaryBorder : colors.border,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
         style,

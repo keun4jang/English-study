@@ -25,7 +25,7 @@ function SplashFallback() {
         gap: 12,
       }}
     >
-      <AppText variant="title" style={{ color: colors.primary }}>
+      <AppText variant="title" style={{ color: colors.primaryInk }}>
         {appConfig.appName}
       </AppText>
       <AppText variant="caption" color="secondary">

@@ -7,7 +7,7 @@
     python3 scripts/generate-icons.py
 
 디자인: 편지 + 펜촉 — "말한 하루가 한 통의 편지가 된다"
-색: 앱 테마 토큰(src/theme/tokens.ts)의 연보라 + 크림에서 가져온다.
+색: 앱 테마 토큰(src/theme/tokens.ts)의 노랑 + 크림에서 가져온다.
 
 외부 서비스나 유료 폰트를 쓰지 않는다 (Pillow만 사용).
 """
@@ -18,11 +18,12 @@ import os
 from PIL import Image, ImageDraw
 
 # --- 색 (src/theme/tokens.ts와 맞춘다) -------------------------------------
-PURPLE_TOP = (126, 106, 171)     # #7E6AAB
-PURPLE_BOTTOM = (87, 66, 124)    # #57427C
-PURPLE_DEEP = (78, 59, 113)      # #4E3B71 — 펜촉
-CREAM = (255, 249, 245)          # #FFF9F5 — 편지
-FLAP = (228, 216, 242)           # #E4D8F2 — 편지 덮개
+# 생노랑은 눈이 아프고 흰 편지와도 안 갈라져서, 살짝 가라앉힌 꿀색을 쓴다.
+BRAND_TOP = (235, 186, 74)       # #EBBA4A
+BRAND_BOTTOM = (201, 146, 42)    # #C9922A
+INK = (74, 52, 16)               # #4A3410 — 펜촉·선
+CREAM = (255, 251, 243)          # #FFFBF3 — 편지
+FLAP = (245, 226, 180)           # #F5E2B4 — 편지 덮개
 
 # 실제로 그리는 배율. 크게 그린 뒤 줄여서 계단 현상을 없앤다.
 SUPERSAMPLE = 4
@@ -39,7 +40,7 @@ def gradient(size):
     image = Image.new('RGB', (size, size))
     draw = ImageDraw.Draw(image)
     for y in range(size):
-        draw.line([(0, y), (size, y)], fill=_lerp(PURPLE_TOP, PURPLE_BOTTOM, y / max(size - 1, 1)))
+        draw.line([(0, y), (size, y)], fill=_lerp(BRAND_TOP, BRAND_BOTTOM, y / max(size - 1, 1)))
     return image
 
 
@@ -62,9 +63,9 @@ def draw_artwork(draw, box, mono=False):
     cut = (0, 0, 0, 0)
     letter = CREAM if not mono else (255, 255, 255, 255)
     flap = FLAP if not mono else cut
-    nib = PURPLE_DEEP if not mono else (255, 255, 255, 255)
+    nib = INK if not mono else (255, 255, 255, 255)
     halo = CREAM if not mono else cut
-    line = PURPLE_DEEP if not mono else cut
+    line = INK if not mono else cut
     detail = letter if not mono else cut
 
     # --- 편지 ---------------------------------------------------------------

@@ -33,7 +33,7 @@ function MasteryBadge({ reviewCount }: { reviewCount: number }) {
     learning: colors.warningSoft,
     familiar: colors.successSoft,
   }[level];
-  const fg = { new: colors.primary, learning: colors.warning, familiar: colors.success }[level];
+  const fg = { new: colors.primaryInk, learning: colors.warning, familiar: colors.success }[level];
   return (
     <View
       accessibilityLabel={`학습 단계: ${MASTERY_LABELS[level]}`}

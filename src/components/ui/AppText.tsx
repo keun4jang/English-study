@@ -39,7 +39,7 @@ export function AppText({
   const colorMap: Record<ColorName, string> = {
     primary: colors.textPrimary,
     secondary: colors.textSecondary,
-    accent: colors.primary,
+    accent: colors.primaryInk,
     onPrimary: colors.onPrimary,
     inverse: colors.textInverse,
     error: colors.error,

@@ -67,7 +67,7 @@ export function InkLoading({ message, slowMessage }: InkLoadingProps) {
               width: 3,
               height: 14,
               borderRadius: 2,
-              backgroundColor: colors.primary,
+              backgroundColor: colors.primaryInk,
               opacity: v,
             }}
           />

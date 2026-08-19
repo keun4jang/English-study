@@ -70,7 +70,7 @@ export default function Login() {
         <Card soft style={{ gap: spacing.md }}>
           <AppText variant="subheading">Demo 모드로 시작</AppText>
           <AppText variant="bodySmall" color="secondary">
-            계정 없이 이 기기에만 저장되는 체험 모드예요. AI는 Mock으로 동작해요.
+            계정 없이 이 기기에만 저장되는 체험 모드예요. 내장 AI로 모든 기능이 그대로 동작해요.
           </AppText>
           <TextField
             placeholder="닉네임 (선택)"

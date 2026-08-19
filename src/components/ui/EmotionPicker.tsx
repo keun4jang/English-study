@@ -88,7 +88,7 @@ export function EmotionPicker({ value, onChange }: EmotionPickerProps) {
                   ? colors.pressedBackground
                   : colors.surface,
               borderWidth: selected ? 2 : 1,
-              borderColor: selected ? colors.primary : colors.border,
+              borderColor: selected ? colors.primaryBorder : colors.border,
               alignItems: 'center',
               justifyContent: 'center',
               paddingVertical: spacing.sm,

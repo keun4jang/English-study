@@ -57,7 +57,7 @@ function ToggleRow({
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: colors.primary, false: colors.borderStrong }}
+        trackColor={{ true: colors.primaryBorder, false: colors.borderStrong }}
         accessibilityLabel={label}
         accessibilityState={{ checked: value }}
       />

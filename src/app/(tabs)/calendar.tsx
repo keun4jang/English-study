@@ -168,7 +168,7 @@ export default function CalendarTab() {
                           ? colors.pressedBackground
                           : 'transparent',
                       borderWidth: isSelected ? 2 : isToday ? 1.5 : 0,
-                      borderColor: colors.primary,
+                      borderColor: colors.primaryBorder,
                       margin: 1,
                       gap: 1,
                     })}

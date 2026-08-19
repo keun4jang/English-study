@@ -36,7 +36,7 @@ export function Chip({ label, selected, onPress }: ChipProps) {
             ? colors.pressedBackground
             : colors.surface,
         borderWidth: selected ? 2 : 1,
-        borderColor: selected ? colors.primary : colors.border,
+        borderColor: selected ? colors.primaryBorder : colors.border,
         justifyContent: 'center',
       })}
     >

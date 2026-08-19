@@ -170,7 +170,7 @@ export function SpeakPractice({
                   height: 52,
                   borderRadius: 26,
                   borderWidth: 2,
-                  borderColor: colors.primary,
+                  borderColor: colors.primaryBorder,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
