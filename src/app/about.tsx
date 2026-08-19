@@ -13,7 +13,7 @@ export default function AboutScreen() {
   return (
     <Screen>
       <View style={{ gap: spacing.lg, alignItems: 'center', paddingTop: spacing.xxl }}>
-        <AppIcon name="book-open" size={48} color="accent" />
+        <AppIcon name="mail" size={48} color="accent" />
         <AppText variant="title">{appConfig.appName}</AppText>
         <AppText variant="bodySmall" color="secondary" align="center">
           {appConfig.tagline}

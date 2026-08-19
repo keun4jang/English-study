@@ -1,14 +1,13 @@
 {
   "expo": {
-    "name": "Mellow Diary",
-    "slug": "mellow-diary",
-    "version": "0.4.1",
+    "name": "D-log",
+    "slug": "d-log",
+    "version": "0.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mellowdiary",
+    "scheme": "dlog",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성으로 일기를 작성할 때 마이크를 사용해요.",
@@ -17,12 +16,12 @@
       }
     },
     "android": {
-      "package": "com.mellowdiary.app",
+      "package": "com.dlog.app",
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#FFF9F5",
+        "backgroundColor": "#6B5595",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -32,11 +31,11 @@
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png",
-      "name": "Mellow Diary",
-      "shortName": "Mellow",
+      "name": "D-log",
+      "shortName": "D-log",
       "themeColor": "#9B8AC4",
       "backgroundColor": "#FFF9F5",
-      "description": "AI 친구와 대화하며 완성하는 외국어 일기"
+      "description": "말한 하루가 외국어 일기가 되는 데일리 로그"
     },
     "plugins": [
       "expo-router",

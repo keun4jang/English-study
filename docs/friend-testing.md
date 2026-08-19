@@ -68,7 +68,7 @@ npx expo run:android          # 또는 eas build --profile development
 - [ ] 달력에서 오늘 일기 확인, 상세에서 듣기(🔊) 동작
 - [ ] 직접 쓰기 → 사진 추가 → 저장
 - [ ] 설정에서 다크모드/글자 크기 변경
-- [ ] 앱 하단 버전 표시 확인 (예: Mellow Diary v0.1.0)
+- [ ] 앱 하단 버전 표시 확인 (예: D-log v0.1.0)
 
 ## 버그 제보
 

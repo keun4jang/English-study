@@ -65,7 +65,7 @@ export default function Onboarding() {
 
         {step === 0 ? (
           <View style={{ gap: spacing.lg, alignItems: 'center', paddingVertical: spacing.xxl }}>
-            <AppIcon name="book-open" size={48} color="accent" />
+            <AppIcon name="mail" size={48} color="accent" />
             <AppText variant="title" align="center">
               {appConfig.appName}
             </AppText>

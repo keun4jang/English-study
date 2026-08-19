@@ -100,6 +100,15 @@ describe('백업 내보내기/가져오기', () => {
     expect(result).toEqual({ ok: false, reason: 'invalid-content' });
   });
 
+  it('이름을 바꾸기 전(Mellow Diary)에 만든 백업도 복원된다', () => {
+    const legacy = JSON.parse(
+      buildBackup({ profile: null, settings: {}, diaries: [entry('d1')], expressions: [] }),
+    );
+    legacy.format = 'mellow-diary-backup';
+    const result = parseBackup(JSON.stringify(legacy), empty);
+    expect(result.ok).toBe(true);
+  });
+
   it('빈 백업도 안전하게 처리', () => {
     const text = buildBackup({ profile: null, settings: {}, diaries: [], expressions: [] });
     const result = parseBackup(text, empty);

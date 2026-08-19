@@ -11,7 +11,12 @@ import { DiaryEntry, SavedExpression } from '@/domain/types';
  * 형식은 사람이 읽을 수 있는 JSON이며, 다른 서비스로 전송되지 않는다.
  */
 
-export const BACKUP_FORMAT = 'mellow-diary-backup';
+export const BACKUP_FORMAT = 'd-log-backup';
+/**
+ * 앱 이름을 바꾸기 전(Mellow Diary)에 내보낸 백업도 계속 복원할 수 있어야 한다.
+ * 이름이 바뀌었다고 사용자가 이미 저장해 둔 일기를 못 읽으면 안 된다.
+ */
+export const LEGACY_BACKUP_FORMATS = ['mellow-diary-backup'] as const;
 export const BACKUP_VERSION = 1;
 
 const photoSchema = z.object({
@@ -60,7 +65,7 @@ const expressionSchema = z.object({
 });
 
 export const backupSchema = z.object({
-  format: z.literal(BACKUP_FORMAT),
+  format: z.enum([BACKUP_FORMAT, ...LEGACY_BACKUP_FORMATS]),
   version: z.number(),
   exportedAt: z.string(),
   app: z.string().optional(),
@@ -115,7 +120,9 @@ export function parseBackup(
   } catch {
     return { ok: false, reason: 'invalid-json' };
   }
-  if (typeof raw !== 'object' || raw === null || (raw as { format?: string }).format !== BACKUP_FORMAT) {
+  const format = typeof raw === 'object' && raw !== null ? (raw as { format?: string }).format : undefined;
+  const known: readonly string[] = [BACKUP_FORMAT, ...LEGACY_BACKUP_FORMATS];
+  if (format === undefined || !known.includes(format)) {
     return { ok: false, reason: 'not-a-backup' };
   }
   const parsed = backupSchema.safeParse(raw);

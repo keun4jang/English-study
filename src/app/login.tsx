@@ -36,7 +36,7 @@ export default function Login() {
     <Screen>
       <View style={{ gap: spacing.xl, paddingTop: spacing.xxxl, flexGrow: 1 }}>
         <View style={{ alignItems: 'center', gap: spacing.sm }}>
-          <AppIcon name="book-open" size={40} color="accent" />
+          <AppIcon name="mail" size={40} color="accent" />
           <AppText variant="title">{appConfig.appName}</AppText>
           <AppText variant="bodySmall" color="secondary" align="center">
             {appConfig.tagline}

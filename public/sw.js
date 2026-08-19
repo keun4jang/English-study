@@ -1,5 +1,5 @@
 /*
- * Mellow Diary 서비스 워커 — PWA 설치 + 재설치 없는 업데이트.
+ * D-log 서비스 워커 — PWA 설치 + 재설치 없는 업데이트.
  *
  * 동작 방식:
  * - 빌드 시 postbuild-web.js가 아래 __APP_VERSION__을 실제 버전으로 치환한다.
@@ -10,7 +10,7 @@
  *   그 외 정적 자산은 cache-first(오프라인 shell).
  */
 const APP_VERSION = '__APP_VERSION__';
-const CACHE_NAME = 'mellow-diary-v' + APP_VERSION;
+const CACHE_NAME = 'dlog-v' + APP_VERSION;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

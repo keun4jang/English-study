@@ -1,7 +1,7 @@
 {
-  "name": "Mellow Diary",
-  "short_name": "Mellow",
-  "description": "AI 친구와 대화하며 완성하는 외국어 일기",
+  "name": "D-log",
+  "short_name": "D-log",
+  "description": "말한 하루가 외국어 일기가 되는 데일리 로그",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

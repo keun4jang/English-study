@@ -5,7 +5,7 @@ import { appConfig } from '@/config/appConfig';
 import { spacing } from '@/theme/tokens';
 import { AppText } from './AppText';
 
-/** 앱 최하단의 작은 버전 표시 — "Mellow Diary v0.1.0" */
+/** 앱 최하단의 작은 버전 표시 — "D-log v0.1.0" */
 export function VersionFooter() {
   return (
     <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
