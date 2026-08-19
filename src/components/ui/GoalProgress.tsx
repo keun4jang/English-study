@@ -18,8 +18,19 @@ interface GoalProgressProps {
  * 미달성 상태에 어떤 압박/죄책감 문구도 쓰지 않는다.
  * 진행률은 색 + 텍스트로 함께 표현한다 (색상만으로 구분 금지).
  */
-export function GoalProgress({ total, goal, achieved }: GoalProgressProps) {
+/** 저장된 설정이 오래돼 값이 비어 있어도 화면에 NaN이 찍히지 않게 막는다 */
+function safeCount(value: number, fallback: number): number {
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+/** 설정이 비어 있을 때 쓸 하루 목표 (설정 기본값과 같다) */
+const DEFAULT_GOAL = 3;
+
+export function GoalProgress(props: GoalProgressProps) {
   const { colors } = useTheme();
+  const goal = safeCount(props.goal, DEFAULT_GOAL);
+  const total = safeCount(props.total, 0);
+  const achieved = props.achieved && total >= goal;
   const ratio = goal > 0 ? Math.min(1, total / goal) : 0;
 
   return (

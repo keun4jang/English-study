@@ -143,8 +143,33 @@ export const useSettings = create<SettingsState>()(
       updateDev: (partial) => set((s) => ({ dev: { ...s.dev, ...partial } })),
       resetAll: () => set({ ...defaults }),
     }),
-    // 앱 이름이 Mellow Diary → D-log로 바뀌었지만 이 키는 그대로 둔다.
-    // 바꾸는 순간 이미 저장된 사용자 데이터를 못 찾아 전부 사라진다. 화면에 나오지 않는 값이다.
-    { name: 'mellow-settings', storage: persistStorage },
+    {
+      // 앱 이름이 Mellow Diary → D-log로 바뀌었지만 이 키는 그대로 둔다.
+      // 바꾸는 순간 이미 저장된 사용자 데이터를 못 찾아 전부 사라진다. 화면에 나오지 않는 값이다.
+      name: 'mellow-settings',
+      storage: persistStorage,
+      /**
+       * 저장된 설정과 기본값을 **그룹 안쪽까지** 합친다.
+       *
+       * zustand persist의 기본 병합은 최상위만 얕게 덮어쓴다. 그래서 예전에 설정을 저장한
+       * 사용자는 learning 객체가 통째로 옛날 것으로 바뀌면서, 나중에 추가된 항목이
+       * undefined가 된다. 실제로 dailyGoalSentences가 없어져 홈 화면에 "NaN/"이 찍혔다.
+       *
+       * 항목을 새로 추가할 때마다 마이그레이션을 쓰는 대신, 기본값을 항상 바닥에 깔아 둔다.
+       */
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<SettingsState>;
+        return {
+          ...current,
+          ...saved,
+          learning: { ...current.learning, ...saved.learning },
+          voice: { ...current.voice, ...saved.voice },
+          diary: { ...current.diary, ...saved.diary },
+          design: { ...current.design, ...saved.design },
+          notifications: { ...current.notifications, ...saved.notifications },
+          dev: { ...current.dev, ...saved.dev },
+        };
+      },
+    },
   ),
 );

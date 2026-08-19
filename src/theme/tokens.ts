@@ -191,7 +191,13 @@ export const radius = {
  * 지금 배포 형태(PWA)에 필요 없는 1.7MB를 저장소에 넣게 된다. 네이티브에서는
  * undefined가 되어 시스템 폰트로 안전하게 내려간다.
  */
-const UI_FONT = Platform.OS === 'web' ? 'SUIT' : undefined;
+// 폴백을 반드시 붙인다. 'SUIT' 하나만 쓰면 폰트를 못 받았을 때 브라우저 기본값인
+// Times(세리프)로 떨어져서, 한글은 시스템 고딕인데 영어만 명조로 나오는 기괴한 화면이 된다.
+// (실제로 폰트가 404 나던 화면에서 그 증상을 겪었다.)
+const UI_FONT =
+  Platform.OS === 'web'
+    ? 'SUIT, system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif'
+    : undefined;
 
 export const fonts = {
   /** 한국어·영어 UI 공통 (대화·교정 카드 포함) */

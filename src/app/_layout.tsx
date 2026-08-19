@@ -8,7 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { appConfig } from '@/config/appConfig';
 import { useHydrated } from '@/lib/useHydrated';
-import { palette } from '@/theme/tokens';
+import { fonts, palette } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 function SplashFallback() {
@@ -42,9 +42,11 @@ function RootStack() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
+          // 네비게이션 헤더는 AppText를 거치지 않아 폰트를 직접 지정해야 한다.
+          // 안 하면 화면 제목만 시스템 폰트로 나와 본문과 따로 논다.
+          headerTitleStyle: { fontFamily: fonts.ui, fontWeight: '600' },
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.textPrimary,
-          headerTitleStyle: { fontWeight: '600' },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.background },
         }}

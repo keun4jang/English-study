@@ -66,10 +66,6 @@ export default function ExpressionsScreen() {
     () => store.expressions.filter((e) => e.nextReviewDate <= today),
     [store.expressions, today],
   );
-  const rest = useMemo(
-    () => store.expressions.filter((e) => e.nextReviewDate > today),
-    [store.expressions, today],
-  );
 
   // 퀴즈 상태: 오늘 복습할 표현들을 순서대로
   const [quizIndex, setQuizIndex] = useState(0);
@@ -243,7 +239,12 @@ export default function ExpressionsScreen() {
 
         <View style={{ gap: spacing.md }}>
           <AppText variant="heading">저장한 표현 ({store.expressions.length})</AppText>
-          {rest.map((e) => (
+          {/*
+            단어장은 저장한 표현 전체를 보여 준다. 예전에는 오늘 복습할 표현(due)을 빼고
+            나머지만 그렸는데, 제목의 개수와 목록이 안 맞아서 "4개"라고 써 놓고 아무것도
+            안 보이는 화면이 나왔다.
+          */}
+          {store.expressions.map((e) => (
             <Card key={e.id} style={{ gap: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <AppText variant="subheading" style={{ flex: 1 }}>

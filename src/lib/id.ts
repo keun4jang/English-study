@@ -5,7 +5,10 @@ export function newId(): string {
   return Crypto.randomUUID();
 }
 
-/** 사람이 읽기 쉬운 친구 코드 생성 (예: MLW-4F7K2Q) */
+/** 친구 코드의 접두사. 옛 이름(Mellow)에서 온 MLW- 코드는 실행 시 자동으로 교체된다. */
+export const FRIEND_CODE_PREFIX = 'DLOG';
+
+/** 사람이 읽기 쉬운 친구 코드 생성 (예: DLOG-4F7K2Q) */
 export function newFriendCode(): string {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   const bytes = Crypto.getRandomBytes(6);
@@ -13,5 +16,5 @@ export function newFriendCode(): string {
   for (let i = 0; i < 6; i++) {
     code += alphabet[bytes[i] % alphabet.length];
   }
-  return `MLW-${code}`;
+  return `${FRIEND_CODE_PREFIX}-${code}`;
 }

@@ -4,7 +4,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { radius, raisedShadow } from '@/theme/tokens';
+import { fonts, radius, raisedShadow } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 type FeatherName = keyof typeof Feather.glyphMap;
@@ -74,6 +74,9 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
+        // 헤더와 탭 라벨도 AppText를 거치지 않으므로 폰트를 직접 지정한다
+        headerTitleStyle: { fontFamily: fonts.ui, fontWeight: '600' },
+        tabBarLabelStyle: { fontFamily: fonts.ui, fontWeight: '600' },
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.textPrimary,
         headerShadowVisible: false,
