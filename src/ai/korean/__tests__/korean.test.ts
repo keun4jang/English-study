@@ -1,4 +1,4 @@
-import { composeFromFrame } from '../builder';
+import { BUILDER_CHOICE_NAMES, buildFrames, composeFromFrame } from '../builder';
 import { helpFromKorean } from '../index';
 import { splitParticle } from '../parse';
 import { FOODS, PEOPLE, PLACES, THINGS, TIME_WORDS } from '../words';
@@ -84,9 +84,9 @@ describe('만들 수 없을 때', () => {
   });
 
   it('사전에 없는 단어는 대괄호로 남겨 사용자가 채우게 한다', () => {
-    const help = helpFromKorean('오늘 떡볶이 먹었어', 'en');
-    expect(help.suggestions[0].text).toBe('I ate [떡볶이] today.');
-    expect(help.suggestions[0].unknown).toEqual([{ word: '떡볶이', romanized: null }]);
+    const help = helpFromKorean('오늘 물회 먹었어', 'en');
+    expect(help.suggestions[0].text).toBe('I ate [물회] today.');
+    expect(help.suggestions[0].unknown).toEqual([{ word: '물회', romanized: null }]);
   });
 
   it('뜻이 거의 안 남는 문장은 내놓지 않는다', () => {
@@ -120,24 +120,24 @@ describe('조사가 알려주는 자리를 지킨다', () => {
    * "I did [대구에서] today."가 됐다. 장소가 목적어 자리로 들어가고 목적어는 사라졌다.
    */
   it('모르는 장소가 목적어 자리를 차지하지 않는다', () => {
-    const text = helpFromKorean('오늘 부산에서 라면 먹었어', 'en').suggestions[0].text;
-    expect(text).toBe('I ate ramen at [부산] today.');
+    const text = helpFromKorean('오늘 망원동에서 라면 먹었어', 'en').suggestions[0].text;
+    expect(text).toBe('I ate ramen in [망원동] today.');
   });
 
   it('모르는 말이 둘이면 각자 제 자리에 들어간다', () => {
-    const text = helpFromKorean('어제 강릉에서 물회를 먹었어', 'en').suggestions[0].text;
-    expect(text).toBe('I ate [물회] at [강릉] yesterday.');
+    const text = helpFromKorean('어제 망원동에서 물회를 먹었어', 'en').suggestions[0].text;
+    expect(text).toBe('I ate [물회] in [망원동] yesterday.');
   });
 
   it('모르는 장소는 이름으로 적는 법을 알려준다', () => {
-    const help = helpFromKorean('오늘 대구에서 라면 먹었어', 'en');
-    expect(help.suggestions[0].unknown).toEqual([{ word: '대구', romanized: 'Daegu' }]);
+    const help = helpFromKorean('오늘 망원동에서 라면 먹었어', 'en');
+    expect(help.suggestions[0].unknown).toEqual([{ word: '망원동', romanized: 'Mangwondong' }]);
   });
 
   it('문장을 못 만들어도 이름 표기는 알려준다', () => {
-    const help = helpFromKorean('오늘 대구에서 그거 했어', 'en');
+    const help = helpFromKorean('오늘 망원동에서 그거 했어', 'en');
     expect(help.suggestions).toHaveLength(0);
-    expect(help.nameHints).toEqual([{ ko: '대구', romanized: 'Daegu' }]);
+    expect(help.nameHints).toEqual([{ ko: '망원동', romanized: 'Mangwondong' }]);
   });
 });
 
@@ -204,5 +204,101 @@ describe("'명사 + 하다'는 띄어 써도 알아듣는다", () => {
 
   it('사이에 낀 부정어를 잃지 않는다', () => {
     expect(first('오늘 운동 안 했어')).toBe("I didn't work out today.");
+  });
+});
+
+describe('지명은 at이 아니라 in이다', () => {
+  /**
+   * 검증 단계에서 잡힌 문제다. 지명을 그냥 명사로 넣으면 "I went to Busan"은 맞지만
+   * "~에서"가 들어간 순간 "at Busan"이 되어 전부 틀린 문장이 된다.
+   */
+  it('도시·동네·나라는 in을 쓴다', () => {
+    expect(first('어제 부산에서 라면 먹었어')).toBe('I ate ramen in Busan yesterday.');
+    expect(first('오늘 강남에서 친구 만났어')).toBe('I met a friend in Gangnam today.');
+  });
+
+  it('사전에 없는 장소도 in을 쓴다 (대개 지명이다)', () => {
+    expect(first('어제 망원동에서 라면 먹었어')).toBe('I ate ramen in [망원동] yesterday.');
+  });
+
+  it('건물·가게는 그대로 at이다', () => {
+    expect(first('오늘 카페에서 책 읽었어')).toBe('I read a book at a cafe today.');
+  });
+
+  it('가는 곳은 지명이든 가게든 to다', () => {
+    expect(first('제주에 갔어')).toBe('I went to Jeju.');
+    expect(first('오늘 카페에 갔어')).toBe('I went to a cafe today.');
+  });
+});
+
+describe('넓힌 사전으로 실제 문장 만들기', () => {
+  it.each([
+    ['오늘 대구에서 촬영을 했어', 'I had a shoot in Daegu today.'],
+    ['오늘 회의 했어', 'I had a meeting today.'],
+    ['어제 야근했어', 'I worked late yesterday.'],
+    ['오늘 너무 짜증났어', 'I was so annoyed today.'],
+    ['오늘 출근 안 했어', "I didn't go to work today."],
+    ['주말에 등산 갔어', 'I went hiking over the weekend.'],
+    ['저녁에 회식 했어', 'I had a work dinner in the evening.'],
+    ['오늘 좀 뿌듯했어', 'I was proud of myself today.'],
+    ['오늘 설거지 했어', 'I did the dishes today.'],
+    ['오늘 진짜 정신없었어', 'It was so hectic today.'],
+    ['오늘 발표를 했어', 'I gave a presentation today.'],
+  ])('%s → %s', (input, expected) => {
+    expect(first(input)).toBe(expected);
+  });
+
+  it("'~을 하다'와 '~하다'와 '~ 하다'가 모두 같다", () => {
+    expect(first('오늘 운동을 했어')).toBe('I worked out today.');
+    expect(first('오늘 운동 했어')).toBe('I worked out today.');
+    expect(first('오늘 운동했어')).toBe('I worked out today.');
+  });
+
+  it("'~ 갔어'로 말하는 활동도 알아듣는다", () => {
+    expect(first('어제 여행 갔어')).toBe('I went on a trip yesterday.');
+    expect(first('주말에 캠핑 갔어')).toBe('I went camping over the weekend.');
+  });
+
+  it('미래형에서 go를 두 번 쓰지 않는다', () => {
+    expect(first('내일 출장 갈 거야')).toBe("I'm going on a business trip tomorrow.");
+  });
+});
+
+describe('문장 만들기 선택지', () => {
+  /**
+   * 사전이 커지면서 한 단계에 칩이 90개까지 늘어난 적이 있다. 고르는 화면이 벽이 되면
+   * "고르기만 하면 된다"는 이 기능의 이유가 사라진다.
+   */
+  it('한 단계의 선택지가 20개를 넘지 않는다', () => {
+    for (const frame of buildFrames()) {
+      for (const step of frame.steps) {
+        expect({ frame: frame.id, step: step.id, count: step.choices.length }).toEqual({
+          frame: frame.id,
+          step: step.id,
+          count: expect.any(Number),
+        });
+        expect(step.choices.length).toBeLessThanOrEqual(20);
+        expect(step.choices.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('골라 둔 이름이 모두 사전에 있다', () => {
+    // 사전에서 표제어가 사라지면 칩이 조용히 없어진다 — 여기서 잡는다
+    const counts = Object.entries(BUILDER_CHOICE_NAMES).map(([key, names]) => [key, names.length]);
+    const actual: [string, number][] = [
+      ['time', buildFrames()[0].steps[0].choices.length],
+      ['place', buildFrames()[0].steps[1].choices.length],
+      ['person', buildFrames()[0].steps[2].choices.length],
+      ['food', buildFrames()[1].steps[1].choices.length],
+      ['activity', buildFrames()[2].steps[1].choices.length],
+      ['thing', buildFrames()[3].steps[1].choices.length],
+      ['meetPerson', buildFrames()[4].steps[1].choices.length],
+      ['feeling', buildFrames()[5].steps[1].choices.length],
+    ];
+    const expected = Object.fromEntries(counts);
+    for (const [key, count] of actual) {
+      expect({ key, count }).toEqual({ key, count: expected[key] });
+    }
   });
 });

@@ -38,6 +38,20 @@ export const TIME_WORDS: KoNoun[] = [
   n('요즘', 'these days', '最近'),
   n('아까', 'earlier', 'さっき'),
   n('방금', 'just now', 'さっき'),
+
+  /* --- 도메인별 실사용 문장에서 뽑아 검증한 표제어 --- */
+  n('하루종일', 'all day', '一日中'),
+  n('밤새', 'all night', '徹夜で'),
+  n('월요일', 'on Monday', '月曜日に'),
+  n('화요일', 'on Tuesday', '火曜日に'),
+  n('수요일', 'on Wednesday', '水曜日に'),
+  n('목요일', 'on Thursday', '木曜日に'),
+  n('금요일', 'on Friday', '金曜日に'),
+  n('오랜만에', 'for the first time in a while', '久しぶりに', { alt: ['오랜만'] }),
+  n('지난달', 'last month', '先月'),
+  n('방학', 'over the break', '休み'),
+  n('연휴', 'over the long weekend', '連休に'),
+  n('어젯밤', 'last night', '昨夜'),
 ];
 
 /** 사람 — "with {person}" / "met {person}" 자리에 들어간다 */
@@ -63,6 +77,18 @@ export const PEOPLE: KoNoun[] = [
   n('반려견', 'my dog', '犬', { alt: ['강아지'] }),
   n('고양이', 'my cat', '猫'),
   n('혼자', 'by myself', 'ひとりで'),
+
+  /* --- 도메인별 실사용 문장에서 뽑아 검증한 표제어 --- */
+  n('사장님', 'my boss', '社長', { alt: ['점장님'] }),
+  n('대표님', 'our CEO', '代表'),
+  n('팀원들', 'my team', 'チームのみんな', { alt: ['팀원', '팀'] }),
+  n('클라이언트', 'a client', 'クライアント', { alt: ['거래처'] }),
+  n('손님', 'a customer', 'お客さん', { alt: ['고객'] }),
+  n('스태프', 'the crew', 'スタッフ', { alt: ['스탭'] }),
+  n('집주인', 'my landlord', '大家さん'),
+  n('이웃', 'my neighbor', '隣の人'),
+  n('교수님', 'my professor', '教授', { alt: ['교수'] }),
+  n('조교', 'the TA', 'TA', { alt: ['조교님'] }),
 ];
 
 /** 장소 — "to {place}" / "at {place}" */
@@ -93,6 +119,49 @@ export const PLACES: KoNoun[] = [
   n('학원', 'my class', '塾'),
   n('서점', 'the bookstore', '本屋'),
   n('밖', 'outside', '外', { bareDestination: true }),
+
+  /* --- 도메인별 실사용 문장에서 뽑아 검증한 표제어 --- */
+  n('현장', 'the site', '現場'),
+  n('스튜디오', 'the studio', 'スタジオ'),
+  n('본사', 'the head office', '本社'),
+  n('구내식당', 'the cafeteria', '社員食堂'),
+  n('공항', 'the airport', '空港'),
+  n('역', 'the station', '駅', { alt: ['지하철역'] }),
+  n('호텔', 'the hotel', 'ホテル'),
+  n('약국', 'the pharmacy', '薬局'),
+  n('동물병원', 'the vet', '動物病院'),
+  n('부동산', 'the real estate office', '不動産屋'),
+  n('세탁소', 'the dry cleaner\'s', 'クリーニング屋'),
+  n('다이소', 'Daiso', 'ダイソー'),
+  n('주민센터', 'the local government office', '役所', { alt: ['동사무소'] }),
+  n('강의실', 'the lecture hall', '講義室'),
+  n('독서실', 'the study room', '自習室'),
+  n('스터디카페', 'a study cafe', '勉強カフェ'),
+  n('시험장', 'the test center', '試験会場', { alt: ['고사장'] }),
+  n('정류장', 'the bus stop', 'バス停', { alt: ['버스정류장'] }),
+  n('펜션', 'a guesthouse', 'ペンション'),
+  n('놀이공원', 'the amusement park', '遊園地'),
+  n('미술관', 'the art museum', '美術館'),
+  n('박물관', 'the museum', '博物館'),
+  n('전시회', 'an exhibition', '展示会', { alt: ['전시'] }),
+  n('콘서트', 'a concert', 'コンサート'),
+  n('공연', 'a show', '公演'),
+  n('뮤지컬', 'a musical', 'ミュージカル'),
+  n('축제', 'a festival', 'お祭り'),
+  n('팝업스토어', 'a pop-up store', 'ポップアップストア', { alt: ['팝업'] }),
+  n('경기장', 'the stadium', 'スタジアム', { alt: ['야구장'] }),
+  n('한강', 'the Han River', '漢江'),
+  n('캠핑장', 'the campsite', 'キャンプ場'),
+  n('맛집', 'a good restaurant', '人気店'),
+  n('술집', 'a bar', '居酒屋'),
+  n('노래방', 'karaoke', 'カラオケ'),
+  n('고깃집', 'a barbecue place', '焼肉屋'),
+  n('빵집', 'the bakery', 'パン屋', { alt: ['베이커리'] }),
+  n('스타벅스', 'Starbucks', 'スターバックス'),
+  n('이자카야', 'an izakaya', '居酒屋'),
+  n('포장마차', 'a street food stall', '屋台', { alt: ['포차'] }),
+  n('찜질방', 'a jjimjilbang', 'チムジルバン'),
+  n('모임', 'a get-together', '集まり'),
 ];
 
 /** 음식·음료 — "ate {food}" / "drank {drink}" */
@@ -126,6 +195,53 @@ export const FOODS: KoNoun[] = [
   n('물', 'water', '水'),
   n('디저트', 'dessert', 'デザート'),
   n('간식', 'a snack', 'おやつ'),
+
+  /* --- 도메인별 실사용 문장에서 뽑아 검증한 표제어 --- */
+  n('우유', 'milk', '牛乳'),
+  n('계란', 'eggs', '卵', { alt: ['달걀'] }),
+  n('야채', 'vegetables', '野菜', { alt: ['채소'] }),
+  n('고기', 'meat', '肉'),
+  n('반찬', 'side dishes', 'おかず'),
+  n('배달음식', 'takeout', '出前'),
+  n('떡볶이', 'tteokbokki', 'トッポッキ'),
+  n('비빔밥', 'bibimbap', 'ビビンバ'),
+  n('마라탕', 'malatang', 'マーラータン'),
+  n('짜장면', 'jjajangmyeon', 'ジャージャー麺', { alt: ['자장면'] }),
+  n('짬뽕', 'jjamppong', 'チャンポン'),
+  n('탕수육', 'sweet and sour pork', '酢豚'),
+  n('돈까스', 'a pork cutlet', 'とんかつ', { alt: ['돈가스'] }),
+  n('초밥', 'sushi', '寿司', { alt: ['스시'] }),
+  n('회', 'sashimi', '刺身'),
+  n('우동', 'udon', 'うどん'),
+  n('김치', 'kimchi', 'キムチ'),
+  n('만두', 'dumplings', '餃子'),
+  n('찌개', 'stew', 'チゲ'),
+  n('국밥', 'gukbap', 'クッパ'),
+  n('냉면', 'cold noodles', '冷麺'),
+  n('족발', 'jokbal', '豚足'),
+  n('보쌈', 'bossam', 'ポッサム'),
+  n('스테이크', 'steak', 'ステーキ'),
+  n('야식', 'a late-night snack', '夜食'),
+  n('해장국', 'hangover soup', 'ヘジャンクク'),
+  n('안주', 'bar snacks', 'つまみ'),
+  n('아이스크림', 'ice cream', 'アイス'),
+  n('빙수', 'shaved ice', 'かき氷'),
+  n('마카롱', 'a macaron', 'マカロン'),
+  n('쿠키', 'a cookie', 'クッキー'),
+  n('도넛', 'a donut', 'ドーナツ'),
+  n('크로와상', 'a croissant', 'クロワッサン', { alt: ['크루아상'] }),
+  n('초콜릿', 'chocolate', 'チョコレート'),
+  n('브런치', 'brunch', 'ブランチ'),
+  n('소주', 'soju', 'ソジュ'),
+  n('막걸리', 'makgeolli', 'マッコリ'),
+  n('와인', 'wine', 'ワイン'),
+  n('하이볼', 'a highball', 'ハイボール'),
+  n('콜라', 'a Coke', 'コーラ'),
+  n('주스', 'juice', 'ジュース'),
+  n('스무디', 'a smoothie', 'スムージー'),
+  n('밀크티', 'milk tea', 'ミルクティー'),
+  n('콜드브루', 'cold brew', 'コールドブリュー'),
+  n('아이스아메리카노', 'an iced americano', 'アイスアメリカーノ', { alt: ['아아'] }),
 ];
 
 /** 사물·대상 — 사고, 보고, 읽고, 듣는 것 */
@@ -159,6 +275,112 @@ export const THINGS: KoNoun[] = [
   n('아무것', 'anything', '何も', { alt: ['아무것도'] }),
   n('산책', 'a walk', '散歩'),
   n('청소', 'the cleaning', '掃除'),
+
+  /* --- 도메인별 실사용 문장에서 뽑아 검증한 표제어 --- */
+  n('프로젝트', 'the project', 'プロジェクト'),
+  n('영상', 'the video', '動画'),
+  n('대본', 'the script', '台本'),
+  n('이력서', 'my resume', '履歴書'),
+  n('포트폴리오', 'my portfolio', 'ポートフォリオ'),
+  n('자료', 'the materials', '資料'),
+  n('서류', 'the paperwork', '書類'),
+  n('계약서', 'the contract', '契約書'),
+  n('노트북', 'my laptop', 'ノートパソコン'),
+  n('카메라', 'my camera', 'カメラ'),
+  n('장비', 'the gear', '機材'),
+  n('택배', 'a package', '宅配便'),
+  n('휴지', 'toilet paper', 'トイレットペーパー'),
+  n('세제', 'detergent', '洗剤'),
+  n('생필품', 'household supplies', '日用品'),
+  n('머리', 'my hair', '髪'),
+  n('돈', 'money', 'お金'),
+  n('월세', 'my rent', '家賃'),
+  n('세탁기', 'the washing machine', '洗濯機'),
+  n('에어컨', 'the air conditioner', 'エアコン'),
+  n('가구', 'furniture', '家具'),
+  n('과제', 'my assignment', '課題'),
+  n('강의', 'the lecture', '講義'),
+  n('인강', 'an online lecture', 'オンライン授業', { alt: ['인터넷강의'] }),
+  n('발표', 'my presentation', '発表'),
+  n('레포트', 'my paper', 'レポート', { alt: ['리포트'] }),
+  n('중간고사', 'midterms', '中間テスト'),
+  n('기말고사', 'finals', '期末テスト'),
+  n('성적', 'my grades', '成績', { alt: ['학점'] }),
+  n('자격증', 'a certification', '資格'),
+  n('토익', 'the TOEIC', 'TOEIC'),
+  n('문제집', 'a workbook', '問題集'),
+  n('필기', 'my notes', 'ノート', { alt: ['노트필기'] }),
+  n('단어', 'vocabulary', '単語'),
+  n('문법', 'grammar', '文法'),
+  n('티켓', 'a ticket', 'チケット', { alt: ['표', '기차표'] }),
+  n('기념품', 'a souvenir', 'お土産'),
+  n('다이어트', 'a diet', 'ダイエット'),
+  n('잠', 'sleep', '睡眠'),
+  n('몸', 'my body', '体'),
+  n('기분', 'my mood', '気分'),
+  n('낮잠', 'a nap', '昼寝'),
+];
+
+
+/**
+ * 지역·나라 이름.
+ *
+ * 전치사가 다르다 — 도시·지역은 **in**이다. "at Busan"은 틀리고 "in Busan"이 맞다.
+ * 이걸 빼먹고 지명을 그냥 넣으면 "에서"가 들어간 문장이 전부 틀린 영어가 된다.
+ * (실제로 검증 단계에서 이 이유로 지명 제안이 통째로 탈락했다.)
+ *
+ * 여기 없는 지명은 romanize가 표기를 제안한다 — 사전으로 다 담을 수 없는 영역이다.
+ */
+export const REGIONS: KoNoun[] = [
+  n('서울', 'Seoul', 'ソウル', { preposition: 'in' }),
+  n('부산', 'Busan', '釜山', { preposition: 'in' }),
+  n('대구', 'Daegu', '大邱', { preposition: 'in' }),
+  n('인천', 'Incheon', '仁川', { preposition: 'in' }),
+  n('광주', 'Gwangju', '光州', { preposition: 'in' }),
+  n('대전', 'Daejeon', '大田', { preposition: 'in' }),
+  n('울산', 'Ulsan', '蔚山', { preposition: 'in' }),
+  n('수원', 'Suwon', '水原', { preposition: 'in' }),
+  n('성남', 'Seongnam', '城南', { preposition: 'in' }),
+  n('용인', 'Yongin', '龍仁', { preposition: 'in' }),
+  n('창원', 'Changwon', '昌原', { preposition: 'in' }),
+  n('청주', 'Cheongju', '清州', { preposition: 'in' }),
+  n('전주', 'Jeonju', '全州', { preposition: 'in' }),
+  n('천안', 'Cheonan', '天安', { preposition: 'in' }),
+  n('제주', 'Jeju', '済州', { preposition: 'in', alt: ['제주도'] }),
+  n('강릉', 'Gangneung', '江陵', { preposition: 'in' }),
+  n('속초', 'Sokcho', '束草', { preposition: 'in' }),
+  n('여수', 'Yeosu', '麗水', { preposition: 'in' }),
+  n('경주', 'Gyeongju', '慶州', { preposition: 'in' }),
+  n('춘천', 'Chuncheon', '春川', { preposition: 'in' }),
+  n('포항', 'Pohang', '浦項', { preposition: 'in' }),
+  n('평택', 'Pyeongtaek', '平沢', { preposition: 'in' }),
+  // 동네·상권 — 도시와 같은 규칙(in)을 따른다
+  n('강남', 'Gangnam', '江南', { preposition: 'in' }),
+  n('홍대', 'Hongdae', '弘大', { preposition: 'in' }),
+  n('명동', 'Myeongdong', '明洞', { preposition: 'in' }),
+  n('신촌', 'Sinchon', '新村', { preposition: 'in' }),
+  n('이태원', 'Itaewon', '梨泰院', { preposition: 'in' }),
+  n('성수', 'Seongsu', '聖水', { preposition: 'in', alt: ['성수동'] }),
+  n('연남동', 'Yeonnam-dong', '延南洞', { preposition: 'in' }),
+  n('여의도', 'Yeouido', '汝矣島', { preposition: 'in' }),
+  n('잠실', 'Jamsil', '蚕室', { preposition: 'in' }),
+  n('판교', 'Pangyo', '板橋', { preposition: 'in' }),
+  n('광화문', 'Gwanghwamun', '光化門', { preposition: 'in' }),
+  n('종로', 'Jongno', '鍾路', { preposition: 'in' }),
+  n('서면', 'Seomyeon', '西面', { preposition: 'in' }),
+  n('해운대', 'Haeundae', '海雲台', { preposition: 'in' }),
+  // 나라
+  n('한국', 'Korea', '韓国', { preposition: 'in' }),
+  n('일본', 'Japan', '日本', { preposition: 'in' }),
+  n('미국', 'the US', 'アメリカ', { preposition: 'in' }),
+  n('중국', 'China', '中国', { preposition: 'in' }),
+  n('대만', 'Taiwan', '台湾', { preposition: 'in' }),
+  n('베트남', 'Vietnam', 'ベトナム', { preposition: 'in' }),
+  n('태국', 'Thailand', 'タイ', { preposition: 'in' }),
+  n('필리핀', 'the Philippines', 'フィリピン', { preposition: 'in' }),
+  n('호주', 'Australia', 'オーストラリア', { preposition: 'in' }),
+  n('캐나다', 'Canada', 'カナダ', { preposition: 'in' }),
+  n('유럽', 'Europe', 'ヨーロッパ', { preposition: 'in' }),
 ];
 
 /** 검색용 통합 사전 (긴 표제어가 먼저 걸리도록 정렬해 둔다) */
@@ -173,8 +395,8 @@ function indexOf(list: KoNoun[]): Map<string, KoNoun> {
 
 export const TIME_INDEX = indexOf(TIME_WORDS);
 export const PEOPLE_INDEX = indexOf(PEOPLE);
-export const PLACE_INDEX = indexOf(PLACES);
-export const NOUN_INDEX = indexOf([...FOODS, ...THINGS, ...PLACES, ...PEOPLE]);
+export const PLACE_INDEX = indexOf([...PLACES, ...REGIONS]);
+export const NOUN_INDEX = indexOf([...FOODS, ...THINGS, ...PLACES, ...REGIONS, ...PEOPLE]);
 
 /** 모든 표제어를 긴 것부터 (부분 일치로 짧은 단어가 먼저 잡히는 것을 막는다) */
 export function sortedKeys(index: Map<string, KoNoun>): string[] {

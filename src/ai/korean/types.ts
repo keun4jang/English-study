@@ -21,6 +21,14 @@ export interface KoNoun {
    * (회사는 "went to work"라서 여기 해당하지 않는다)
    */
   bareDestination?: boolean;
+  /**
+   * "~에서"를 옮길 때 쓰는 전치사. 기본은 at.
+   *
+   * 도시·지역·나라는 **in**을 쓴다. "at Busan"은 틀리고 "in Busan"이 맞다. 건물이나
+   * 가게처럼 점으로 찍히는 장소만 at이다. 이 구분을 빼먹으면 지명을 사전에 넣는 순간
+   * 전부 틀린 문장이 된다.
+   */
+  preposition?: 'at' | 'in';
 }
 
 export type PredicateSubject = 'i' | 'it';

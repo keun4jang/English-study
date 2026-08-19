@@ -37,6 +37,17 @@ function slot(
 }
 
 /**
+ * "~에서"를 영어로 옮긴다.
+ *
+ * 사전에 없는 장소는 **in**을 쓴다. 모르는 장소 이름은 대개 지역·동네 이름이고
+ * (가게·시설 이름은 사전에 담아 두었다), 지명에는 in이 맞다. "at Busan"은 틀린다.
+ */
+function atPhrase(noun: KoNoun | null, filled: string): string {
+  const preposition = noun ? (noun.preposition ?? 'at') : 'in';
+  return `${preposition} ${filled}`;
+}
+
+/**
  * 이미 서술어에 들어간 말을 뒤에 또 붙이지 않는다.
  * "회사에서 일했어" → "I worked at work"가 되는 식인데, 틀린 문장은 아니지만
  * 사람이 쓰지 않는 문장이라 예시로 보여줄 수 없다.
@@ -80,7 +91,7 @@ function buildEnglish(parse: KoParse, used: Set<string>): EnBuild | null {
     const degree = parse.intensified && !parse.negated ? 'so ' : '';
     if (withPerson) tail.push(withPerson);
     const where = slot(parse.place, parse.unknown, 'place', used);
-    if (where) tail.push(`at ${where}`);
+    if (where) tail.push(atPhrase(parse.place, where));
     return { core: `${be} ${degree}${parse.adjective.en}`, tail };
   }
 
@@ -88,12 +99,14 @@ function buildEnglish(parse: KoParse, used: Set<string>): EnBuild | null {
   const doVerb = doVerbOf(parse);
   if (doVerb) {
     let core: string;
-    if (future) core = `I'm going to ${doVerb.en.present}`;
+    // "I'm going to go on a trip"은 go가 두 번이라 아무도 안 쓴다 → "I'm going on a trip"
+    if (future && doVerb.en.present.startsWith('go ')) core = `I'm going${doVerb.en.present.slice(2)}`;
+    else if (future) core = `I'm going to ${doVerb.en.present}`;
     else if (parse.negated) core = past ? `I didn't ${doVerb.en.present}` : `I don't ${doVerb.en.present}`;
     else core = `I ${past ? doVerb.en.past : doVerb.en.present}`;
     if (withPerson) tail.push(withPerson);
     const where = slot(parse.place, parse.unknown, 'place', used);
-    if (where) tail.push(`at ${where}`);
+    if (where) tail.push(atPhrase(parse.place, where));
     return { core, tail };
   }
 
@@ -126,7 +139,7 @@ function buildEnglish(parse: KoParse, used: Set<string>): EnBuild | null {
         ? parse.object.en
         : slot(null, parse.unknown, 'person', used);
     if (!person) return null;
-    if (parse.place) tail.push(`at ${parse.place.en}`);
+    if (parse.place) tail.push(atPhrase(parse.place, parse.place.en));
     return { core: conjugate(person), tail };
   }
 
@@ -136,14 +149,14 @@ function buildEnglish(parse: KoParse, used: Set<string>): EnBuild | null {
     if (!object) return null;
     if (withPerson && parse.object) tail.push(withPerson);
     const where = slot(parse.place, parse.unknown, 'place', used);
-    if (where) tail.push(`at ${where}`);
+    if (where) tail.push(atPhrase(parse.place, where));
     return { core: conjugate(object), tail };
   }
 
   // intransitive
   if (withPerson) tail.push(withPerson);
   const where = slot(parse.place, parse.unknown, 'place', used);
-  if (where) tail.push(`at ${where}`);
+  if (where) tail.push(atPhrase(parse.place, where));
   return { core: conjugate(null), tail };
 }
 

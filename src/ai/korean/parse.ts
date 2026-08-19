@@ -129,11 +129,29 @@ function findPredicate(text: string): Predicate | null {
     ['해요', 'present'], ['한다', 'present'], ['해', 'present'],
     ['할 거', 'future'], ['하려고', 'future'],
   ] as const;
+  /**
+   * '가다'로도 말하는 활동들. "등산했어"보다 "등산 갔어"가 훨씬 자연스럽다.
+   * 영어 쪽이 이미 went로 시작하는 활동이 정확히 이 부류라, 따로 목록을 두지 않고
+   * 영어 표현에서 알아낸다.
+   */
+  const GO_SUFFIXES = [
+    ['갔어요', 'past'], ['갔어', 'past'], ['갔다', 'past'], ['갔', 'past'],
+    ['가요', 'present'], ['간다', 'present'],
+    ['갈 거', 'future'], ['가려고', 'future'],
+  ] as const;
   for (const doVerb of DO_VERBS) {
     for (const [suffix, tense] of DO_SUFFIXES) {
       const form = doVerb.ko + suffix;
       if (text.includes(form)) {
         take({ verb: null, doVerb, adjective: null, tense, matched: form });
+      }
+    }
+    if (!doVerb.en.past.startsWith('went')) continue;
+    for (const [suffix, tense] of GO_SUFFIXES) {
+      for (const form of [doVerb.ko + suffix, `${doVerb.ko} ${suffix}`]) {
+        if (text.includes(form)) {
+          take({ verb: null, doVerb, adjective: null, tense, matched: form });
+        }
       }
     }
   }
@@ -185,11 +203,12 @@ const LEFTOVER_ENDINGS = new Set([
  * 없는 하다로 따로 잡혀서 "I did exercise"(어색) 또는 아예 못 만드는 문장이 된다.
  * 맞춤법상으로도 붙여 쓰는 게 맞는데, 실제로는 띄어 쓰는 사람이 훨씬 많다.
  *
- * 부정어(안·못)가 사이에 끼면 앞으로 빼서 "안 운동했어" 꼴로 만든다. 어색한 한국어지만
+ * 사이에 낀 목적격 조사도 걷어낸다 — "촬영을 했어"가 실제로 제일 흔한 형태다.
+ * 부정어(안·못)가 끼면 앞으로 빼서 "안 운동했어" 꼴로 만든다. 어색한 한국어지만
  * 이건 사람이 읽을 문장이 아니라 파서가 읽을 중간 형태다.
  */
 const DO_VERB_SPACING = new RegExp(
-  `(${DO_VERBS.map((v) => v.ko).join('|')})\\s+((?:안|못)\\s+)?(하[아-힣]|했[아-힣]?|해[요]?|한다)`,
+  `(${DO_VERBS.map((v) => v.ko).join('|')})(?:을|를)?\\s+((?:안|못)\\s+)?(하[아-힣]|했[아-힣]?|해[요]?|한다)`,
   'g',
 );
 
