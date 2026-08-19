@@ -64,6 +64,45 @@ function ensureTerminator(text: string, language: LearningLanguage): string {
   return text + (language === 'ja' ? '。' : '.');
 }
 
+/** 한 규칙이 한 문장에서 적용될 수 있는 최대 횟수 (무한 반복 방지) */
+const MAX_PASSES_PER_RULE = 4;
+
+/**
+ * from 위치부터 검색한다. 규칙 패턴에는 g 플래그가 없으므로(테스트로 강제),
+ * 앞부분을 잘라 검색한 뒤 인덱스를 되돌려 준다.
+ *
+ * 규칙 패턴은 대부분 \b나 앞 단어를 함께 보는데, 자른 지점이 단어 중간이면 문맥이
+ * 달라진다. 그래서 자를 때는 항상 공백 경계에서 자른다.
+ */
+function execFrom(pattern: RegExp, text: string, from: number): RegExpExecArray | null {
+  if (from <= 0) return pattern.exec(text);
+  if (from >= text.length) return null;
+
+  // 단어 중간에서 자르지 않도록 다음 공백까지 밀어 둔다
+  let start = from;
+  while (start < text.length && !/\s/.test(text[start])) start++;
+  if (start >= text.length) return null;
+
+  const match = pattern.exec(text.slice(start));
+  if (!match || match.index === undefined) return null;
+  match.index += start;
+  match.input = text;
+  return match;
+}
+
+/**
+ * $1~$99 캡처 참조를 실제 값으로 바꾼다.
+ * - 존재하지만 매치에 참여하지 않은 그룹(선택 그룹)은 빈 문자열
+ * - 아예 없는 그룹 번호는 그대로 둔다 (규칙 안의 "$10" 같은 표기를 망가뜨리지 않게)
+ */
+function expand(replacement: string, match: RegExpMatchArray): string {
+  return replacement.replace(/\$(\d{1,2})/g, (whole, digits: string) => {
+    const index = Number(digits);
+    if (index === 0 || index >= match.length) return whole;
+    return match[index] ?? '';
+  });
+}
+
 export function applyRules(
   input: string,
   language: LearningLanguage,
@@ -78,32 +117,49 @@ export function applyRules(
 
   for (const rule of rules) {
     if (rule.language !== language) continue;
-    if (rule.skipIf && rule.skipIf.test(text)) continue;
 
-    // 규칙마다 새 RegExp를 만들어 lastIndex 상태 공유를 피한다
-    const pattern = new RegExp(rule.pattern.source, rule.pattern.flags);
-    const match = pattern.exec(text);
-    if (!match) continue;
+    // 같은 오류를 한 일기 안에서 여러 번 반복하는 경우가 흔하다
+    // ("I go to school and I go to the park yesterday"). 규칙 하나가 여러 번 적용될 수
+    // 있게 하되, 규칙이 자기 출력을 다시 매치해 무한 반복하는 일이 없도록 횟수를 제한한다.
+    let searchFrom = 0;
+    for (let pass = 0; pass < MAX_PASSES_PER_RULE; pass++) {
+      if (rule.skipIf && rule.skipIf.test(text)) break;
 
-    const replacement =
-      typeof rule.replace === 'string' ? rule.replace : rule.replace(match);
-    if (replacement === null) continue;
+      // 규칙마다 새 RegExp를 만들어 lastIndex 상태 공유를 피한다
+      const pattern = new RegExp(rule.pattern.source, rule.pattern.flags);
+      const match = execFrom(pattern, text, searchFrom);
+      if (!match || match.index === undefined) break;
 
-    const before = match[0];
-    // 매치된 구간만 정확히 치환 (같은 단어가 뒤에 또 있어도 첫 매치만)
-    const after = replacement.replace(/\$(\d)/g, (_s, d: string) => match[Number(d)] ?? '');
-    if (before === after) continue;
+      const replacement = typeof rule.replace === 'string' ? rule.replace : rule.replace(match);
+      const before = match[0];
+      if (replacement === null) {
+        // 이 자리는 건너뛰고 뒤쪽에서 같은 오류를 계속 찾는다
+        searchFrom = match.index + Math.max(before.length, 1);
+        continue;
+      }
 
-    text = text.slice(0, match.index) + after + text.slice(match.index + before.length);
+      const after = expand(replacement, match);
+      if (before === after) {
+        searchFrom = match.index + Math.max(before.length, 1);
+        continue;
+      }
 
-    changes.push({ from: before.trim(), to: after.trim(), reasonKo: rule.reasonKo });
-    if (!explanations.includes(rule.explanationKo)) explanations.push(rule.explanationKo);
-    if (rule.keyExpression && !keyExpressions.some((k) => k.expression === rule.keyExpression!.expression)) {
-      keyExpressions.push(rule.keyExpression);
+      text = text.slice(0, match.index) + after + text.slice(match.index + before.length);
+      // 방금 넣은 결과를 다시 검사하지 않는다 (자기 출력 재매치 방지)
+      searchFrom = match.index + after.length;
+
+      changes.push({ from: before.trim(), to: after.trim(), reasonKo: rule.reasonKo });
+      if (!explanations.includes(rule.explanationKo)) explanations.push(rule.explanationKo);
+      if (
+        rule.keyExpression &&
+        !keyExpressions.some((k) => k.expression === rule.keyExpression!.expression)
+      ) {
+        keyExpressions.push(rule.keyExpression);
+      }
+      if (!appliedRuleIds.includes(rule.id)) appliedRuleIds.push(rule.id);
+      if (rule.severity === 'major') severity = 'major';
+      else if (severity !== 'major') severity = 'minor';
     }
-    appliedRuleIds.push(rule.id);
-    if (rule.severity === 'major') severity = 'major';
-    else if (severity !== 'major') severity = 'minor';
   }
 
   // 마무리 다듬기 (대문자/마침표) — 이것만으로는 교정으로 치지 않는다

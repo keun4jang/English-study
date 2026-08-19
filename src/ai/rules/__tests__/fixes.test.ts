@@ -69,6 +69,35 @@ describe('입력 보정은 교정으로 세지 않는다', () => {
   });
 });
 
+describe('같은 오류가 여러 번 나와도 모두 고친다', () => {
+  const REPEATED: Case[] = [
+    ['Yesterday I go to school and I go to the park.', 'Yesterday I went to school and I went to the park.'],
+    ['I ate sandwich and I ate cookie.', 'I ate a sandwich and I ate a cookie.'],
+    ['I listened music and my friend listened music too.', 'I listened to music and my friend listened to music too.'],
+    ['I want go home and I want sleep early.', 'I want to go home and I want to sleep early.'],
+    ['There is many people and there is many cars.', 'There are many people and there are many cars.'],
+  ];
+
+  it.each(REPEATED)('%s → %s', (input, expected) => {
+    const result = applyRules(input, 'en', rulesFor('en'));
+    expect(result.corrected).toBe(expected);
+    expect(result.changes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('같은 규칙이 두 번 적용돼도 규칙 id는 한 번만 기록한다', () => {
+    const result = applyRules('I listened music and my friend listened music too.', 'en', rulesFor('en'));
+    expect(result.appliedRuleIds).toEqual(['en-prep-listen-to']);
+  });
+
+  it('규칙이 자기 출력을 다시 고쳐 무한 반복하지 않는다', () => {
+    // 이미 고쳐진 문장을 다시 넣어도 더 이상 바뀌지 않아야 한다
+    const once = applyRules('I want go home and I want sleep early.', 'en', rulesFor('en'));
+    const twice = applyRules(once.corrected, 'en', rulesFor('en'));
+    expect(twice.corrected).toBe(once.corrected);
+    expect(twice.appliedRuleIds).toEqual([]);
+  });
+});
+
 describe('한 문장에서 여러 규칙이 함께 적용된다', () => {
   it('시제와 관사를 동시에 고친다', () => {
     const result = applyRules('Yesterday I eat a apple.', 'en', rulesFor('en'));

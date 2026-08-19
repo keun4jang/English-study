@@ -6,7 +6,7 @@ Mellow Diary의 모든 주요 변경 사항을 기록합니다.
 
 <!-- next-version -->
 
-## [0.4.0] - 2026-08-19
+## [0.4.1] - 2026-08-19
 
 ### 변경 (가장 큰 변화 — 내장 AI가 진짜 AI가 되었습니다)
 
@@ -23,6 +23,9 @@ Mellow Diary의 모든 주요 변경 사항을 기록합니다.
 - 대화 주제 사전 10개 → **20개**, 같은 대화에서 같은 답을 반복하지 않습니다
 - 휴대폰·음성 입력이 흘린 아포스트로피를 조용히 되돌립니다("don t" → "don't").
   입력 문제이지 영어 실력 문제가 아니라서 교정 카드에 띄우지 않습니다
+- 같은 오류가 한 일기에 여러 번 나와도 **모두** 고칩니다
+  - 예: "I listened music and my friend listened music too."
+    → "I listened to music and my friend listened to music too." 
 
 ### 추가
 
