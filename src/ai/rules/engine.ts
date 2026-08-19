@@ -22,6 +22,34 @@ function tidySpacing(text: string, language: LearningLanguage): string {
   return text.trim().replace(/\s{2,}/g, ' ').replace(/\s+([,.!?])/g, '$1');
 }
 
+/**
+ * 입력 정리 — 교정으로 세지 않는 표기 보정.
+ *
+ * 휴대폰 입력이나 음성 인식은 아포스트로피를 자주 흘린다("don t", "I m").
+ * 이건 영어 실력 문제가 아니라 입력 문제라서, 교정 카드에 "틀렸다"고 띄우지 않고
+ * 조용히 되돌린 뒤 나머지 규칙을 적용한다.
+ */
+const CONTRACTION_FIXES: [RegExp, string][] = [
+  [/\b(do|does|did|is|are|was|were|has|have|had|could|would|should|must|ca|wo|ai)n\s+t\b/gi, "$1n't"],
+  [/\bI\s+m\b/g, "I'm"],
+  [/\b(it|that|he|she|there|what|who|let)\s+s\b/gi, "$1's"],
+  [/\b(I|you|we|they|it|he|she)\s+ll\b/gi, "$1'll"],
+  [/\b(I|you|we|they)\s+ve\b/gi, "$1've"],
+  [/\b(I|you|we|they|he|she|it)\s+d\b/gi, "$1'd"],
+  [/\b(I|you|we|they|he|she|it)\s+re\b/gi, "$1're"],
+];
+
+function normalizeInput(text: string, language: LearningLanguage): string {
+  if (language !== 'en') return text;
+  let out = text;
+  for (const [pattern, replacement] of CONTRACTION_FIXES) {
+    out = out.replace(pattern, replacement);
+  }
+  // 혼자 쓰인 소문자 i는 영어에서 항상 대문자다 (표기 관례라 교정으로 세지 않는다)
+  out = out.replace(/\bi\b/g, 'I');
+  return out;
+}
+
 /** 첫 글자 대문자 (영어) */
 function capitalizeFirst(text: string): string {
   const i = text.search(/[a-z]/i);
@@ -41,7 +69,7 @@ export function applyRules(
   language: LearningLanguage,
   rules: CorrectionRule[],
 ): EngineResult {
-  let text = tidySpacing(input, language);
+  let text = normalizeInput(tidySpacing(input, language), language);
   const changes: RuleChange[] = [];
   const explanations: string[] = [];
   const keyExpressions: RuleKeyExpression[] = [];

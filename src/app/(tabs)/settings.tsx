@@ -10,7 +10,7 @@ import { OptionGroup } from '@/components/ui/OptionGroup';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { VersionFooter } from '@/components/ui/VersionFooter';
-import { isMockAI } from '@/ai';
+import { isBuiltInAI } from '@/ai';
 import { appConfig, getAppEnv, isSupabaseConfigured } from '@/config/appConfig';
 import { buildBackup, parseBackup } from '@/lib/backup';
 import { applyWebUpdate, checkForUpdate } from '@/lib/updates';
@@ -482,7 +482,7 @@ export default function SettingsTab() {
         <SectionTitle>개발 설정</SectionTitle>
         <Card style={{ gap: spacing.md }}>
           <AppText variant="bodySmall" color="secondary">
-            환경: {getAppEnv()} · AI 엔진: {isMockAI() ? '내장 AI (무료·오프라인)' : '외부 AI (유료)'} ·
+            환경: {getAppEnv()} · AI 엔진: {isBuiltInAI() ? '내장 AI (무료·오프라인)' : '외부 AI (유료)'} ·
             Supabase: {isSupabaseConfigured() ? '연결됨' : '미연결'}
           </AppText>
           <AppText variant="caption" color="secondary">

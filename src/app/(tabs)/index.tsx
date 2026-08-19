@@ -12,7 +12,7 @@ import { GoalProgress } from '@/components/ui/GoalProgress';
 import { Screen } from '@/components/ui/Screen';
 import { UpdateBanner } from '@/components/ui/UpdateBanner';
 import { VersionFooter } from '@/components/ui/VersionFooter';
-import { isMockAI } from '@/ai';
+import { isBuiltInAI } from '@/ai';
 import { calcStreakGenerous, diffDays, formatDateKo, todayKey } from '@/lib/dates';
 import { computeDailyProgress } from '@/lib/goals';
 import { usePracticeQueue } from '@/lib/practiceQueue';
@@ -176,7 +176,7 @@ export default function TodayHome() {
               {streakInfo.restDaysUsed > 0 ? ' (하루 쉬어가도 이어져요)' : ''}
             </AppText>
           ) : null}
-          {isMockAI() ? (
+          {isBuiltInAI() ? (
             <AppText variant="caption" color="secondary">
               내장 AI로 동작 중이에요 — 무료이고 인터넷 없이도 쓸 수 있어요
             </AppText>

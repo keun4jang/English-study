@@ -23,7 +23,7 @@ export interface FinalDiaryContext {
 
 /**
  * AI Provider Adapter 인터페이스.
- * Mock ↔ Anthropic(서버 경유) ↔ 기타 모델을 교체 가능하게 추상화한다.
+ * 내장 AI ↔ 외부 AI(서버 경유) ↔ 기타 모델을 교체 가능하게 추상화한다.
  */
 export interface AIProvider {
   readonly name: string;

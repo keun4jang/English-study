@@ -2,7 +2,7 @@ import { router, useNavigation } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, ScrollView, View } from 'react-native';
 
-import { getAIProvider, isMockAI } from '@/ai';
+import { getAIProvider, isBuiltInAI } from '@/ai';
 import { ChatBubble } from '@/components/diary/ChatBubble';
 import { CorrectionCard } from '@/components/diary/CorrectionCard';
 import { SpeakPractice } from '@/components/diary/SpeakPractice';
@@ -304,7 +304,7 @@ export default function ChatScreen() {
       <View style={{ flex: 1 }}>
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           <AppText variant="caption" color="secondary">
-            {isMockAI() ? '내장 AI · ' : ''}오늘 남은 대화 {turnsLeft}턴
+            {isBuiltInAI() ? '내장 AI · ' : ''}오늘 남은 대화 {turnsLeft}턴
           </AppText>
         </View>
 

@@ -43,10 +43,10 @@ describe('비용 안전장치', () => {
     });
   });
 
-  it('기본 상태에서는 내장 AI(mock)가 선택된다', () => {
+  it('기본 상태에서는 내장 AI가 선택된다', () => {
     withEnv({}, () => {
       const { getAIProvider } = require('../index');
-      expect(getAIProvider().name).toBe('mock');
+      expect(getAIProvider().name).toBe('builtin');
     });
   });
 
