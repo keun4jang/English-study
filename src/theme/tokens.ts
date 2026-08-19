@@ -210,9 +210,24 @@ const UI_FONT =
     ? 'SUIT, system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif'
     : undefined;
 
+/**
+ * 손글씨 폰트 — '아기자기한' 감정을 담는 자리에만 쓴다.
+ *
+ * 쓰는 곳: 오늘의 편지 질문, 빈 화면 제목, 온보딩 소개 문장처럼 **앱이 사용자에게 건네는
+ * 고정 문구**. 쓰지 않는 곳: 버튼·설정·교정 카드·통계 숫자·날짜, 그리고 **사용자가 입력한
+ * 모든 글자**(닉네임·일기 본문).
+ *
+ * 사용자 입력에 쓰지 않는 이유는 취향이 아니라 기술적 제약이다. 용량을 줄이려고 앱 소스에
+ * 실제로 등장하는 한글 음절만 남겨 뒀기 때문에(scripts/subset-hand-font.py), 서브셋에 없는
+ * 글자는 브라우저가 그 한 글자만 SUIT로 떨어뜨려 한 단어 안에서 글씨체가 섞인다.
+ */
+const HAND_FONT = Platform.OS === 'web' ? `Gaegu, ${UI_FONT}` : undefined;
+
 export const fonts = {
   /** 한국어·영어 UI 공통 (대화·교정 카드 포함) */
   ui: UI_FONT,
+  /** 감정을 담는 고정 문구 전용 손글씨 (사용자 입력에는 쓰지 않는다) */
+  hand: HAND_FONT,
   /** @deprecated ui 사용 */
   sans: UI_FONT,
   serifEn: 'Lora_400Regular',
@@ -243,6 +258,24 @@ interface TypeToken {
 export const typography: Record<string, TypeToken> = {
   /** 홈 인사말 등 제한된 영역 전용 */
   display: { fontSize: 30, lineHeight: 40, fontWeight: '600', fontFamily: fonts.ui, letterSpacing: -0.45 },
+  /**
+   * 손글씨 문구 — 앱이 말을 거는 자리(오늘의 편지 질문, 온보딩 소개).
+   *
+   * Gaegu는 글자 폭이 넓고 획이 가늘어서 SUIT와 같은 크기로 두면 작고 흐려 보인다.
+   * 그래서 같은 위계라도 한 단계 크게 잡고 줄간격을 넉넉히 준다. 자간은 손글씨의 리듬을
+   * 해치지 않도록 0에 둔다.
+   */
+  editorial: { fontSize: 26, lineHeight: 38, fontWeight: '700', fontFamily: fonts.hand },
+  /** 손글씨 제목 — 빈 화면처럼 한 줄짜리 안내 */
+  editorialTitle: { fontSize: 24, lineHeight: 34, fontWeight: '700', fontFamily: fonts.hand },
+  /** 손글씨 본문 — 두세 줄짜리 소개 문단 */
+  /**
+   * 손글씨 본문 — 두세 줄짜리 소개 문단.
+   *
+   * 20px에서는 온보딩 첫 줄이 420px 화면 좌우 여백에 거의 닿는다. 글자 크기를 '크게'로
+   * 두면(1.15배) 줄이 한 번 더 접히면서 문단 모양이 무너져서 한 단계 낮춰 잡았다.
+   */
+  editorialBody: { fontSize: 19, lineHeight: 31, fontWeight: '400', fontFamily: fonts.hand },
   title: { fontSize: 26, lineHeight: 36, fontWeight: '700', fontFamily: fonts.ui, letterSpacing: -0.35 },
   heading: { fontSize: 22, lineHeight: 30, fontWeight: '700', fontFamily: fonts.ui, letterSpacing: -0.2 },
   subheading: { fontSize: 18, lineHeight: 26, fontWeight: '600', fontFamily: fonts.ui, letterSpacing: -0.1 },

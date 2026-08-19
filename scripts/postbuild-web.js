@@ -66,17 +66,21 @@ if (fs.existsSync(swPath)) {
 const htmlPath = path.join(dist, 'index.html');
 let html = fs.readFileSync(htmlPath, 'utf8');
 
-// SUIT — 로컬 woff2만 사용한다. 외부 CDN(Google Fonts 등)을 호출하지 않으므로
+// 폰트는 로컬 woff2만 사용한다. 외부 CDN(Google Fonts 등)을 호출하지 않으므로
 // 오프라인에서도 폰트가 뜨고, 외부 서비스 장애나 과금에 영향받지 않는다.
 // 하나의 family에 굵기 3개를 등록한다(굵기별로 family를 나누면 브라우저가 가짜 볼드를
 // 덧씌운다). 앱 토큰은 fontFamily:'SUIT' + fontWeight로 굵기를 고른다.
+// Gaegu(손글씨)는 감정 문구 전용이라 무게가 두 개면 충분하다. 앱 소스에 실제로 쓰인
+// 한글만 남긴 서브셋이어서 두 파일 합쳐 약 130KB다(scripts/subset-hand-font.py).
 const fontFaces = [
-  [400, 'suit-regular'],
-  [600, 'suit-semibold'],
-  [700, 'suit-bold'],
+  ['SUIT', 400, 'suit-regular'],
+  ['SUIT', 600, 'suit-semibold'],
+  ['SUIT', 700, 'suit-bold'],
+  ['Gaegu', 400, 'gaegu-regular'],
+  ['Gaegu', 700, 'gaegu-bold'],
 ]
   .map(
-    ([weight, file]) => `@font-face{font-family:"SUIT";` +
+    ([family, weight, file]) => `@font-face{font-family:"${family}";` +
       `src:url("${baseUrl}fonts/${file}.woff2") format("woff2");` +
       // 폰트를 받는 동안 글자가 사라지지 않도록(FOIT 방지) 시스템 폰트로 먼저 보여 준다
       `font-weight:${weight};font-style:normal;font-display:swap;}`,
@@ -94,9 +98,11 @@ const koreanWrapCss =
   'body,#root{word-break:keep-all;overflow-wrap:break-word;}';
 
 const headTags = [
-  // 첫 화면에서 바로 쓰는 두 굵기만 미리 받는다. Bold까지 preload하면 초기 네트워크 경쟁이 커진다.
+  // 첫 화면에 바로 보이는 것만 미리 받는다. 나머지 굵기까지 preload하면 초기 네트워크 경쟁이 커진다.
   `<link rel="preload" href="${baseUrl}fonts/suit-regular.woff2" as="font" type="font/woff2" crossorigin/>`,
   `<link rel="preload" href="${baseUrl}fonts/suit-semibold.woff2" as="font" type="font/woff2" crossorigin/>`,
+  // 홈 첫 화면의 '오늘의 편지' 질문이 Gaegu Bold다. 이것만 미리 받고 Regular는 필요할 때 받는다.
+  `<link rel="preload" href="${baseUrl}fonts/gaegu-bold.woff2" as="font" type="font/woff2" crossorigin/>`,
   `<style>${fontFaces}${koreanWrapCss}</style>`,
   `<link rel="manifest" href="${baseUrl}manifest.json"/>`,
   '<meta name="theme-color" content="#E0A82E"/>',
@@ -139,7 +145,13 @@ if (relativeRefs) {
 }
 
 // 폰트가 빠지면 조용히 시스템 폰트로 떨어져 눈치채기 어렵다 — 빌드에서 바로 잡는다
-const requiredFonts = ['suit-regular.woff2', 'suit-semibold.woff2', 'suit-bold.woff2'];
+const requiredFonts = [
+  'suit-regular.woff2',
+  'suit-semibold.woff2',
+  'suit-bold.woff2',
+  'gaegu-regular.woff2',
+  'gaegu-bold.woff2',
+];
 const missingFonts = requiredFonts.filter(
   (name) => !fs.existsSync(path.join(dist, 'fonts', name)),
 );

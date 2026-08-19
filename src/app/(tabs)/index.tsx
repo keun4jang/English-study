@@ -205,9 +205,8 @@ export default function TodayHome() {
             오늘의 편지
           </AppText>
           <Animated.View style={{ opacity: promptOpacity }}>
-            <AppText style={{ fontSize: 21, lineHeight: 30, fontWeight: '500' }}>
-              {DAILY_PROMPTS[promptIndex]}
-            </AppText>
+            {/* 앱이 말을 거는 한 문장 — 여기만 손글씨다 (variant editorial) */}
+            <AppText variant="editorial">{DAILY_PROMPTS[promptIndex]}</AppText>
           </Animated.View>
           <View style={{ gap: spacing.sm }}>
             <Button
