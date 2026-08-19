@@ -3,8 +3,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { getAIProvider, isBuiltInAI } from '@/ai';
+import { KoHelp, helpFromKorean, isKoreanInput } from '@/ai/korean';
 import { ChatBubble } from '@/components/diary/ChatBubble';
 import { CorrectionCard } from '@/components/diary/CorrectionCard';
+import { KoreanHelpCard } from '@/components/diary/KoreanHelpCard';
+import { SentenceBuilderSheet } from '@/components/diary/SentenceBuilderSheet';
 import { SpeakPractice } from '@/components/diary/SpeakPractice';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
@@ -50,6 +53,9 @@ export default function ChatScreen() {
   const [practiceTarget, setPracticeTarget] = useState<string | null>(null);
   const [limitMessage, setLimitMessage] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  /** 한글로 썼을 때 띄우는 예시 카드 */
+  const [koreanHelp, setKoreanHelp] = useState<KoHelp | null>(null);
+  const [builderOpen, setBuilderOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const sttSupported = getSttAdapter().isSupported();
 
@@ -125,6 +131,19 @@ export default function ChatScreen() {
   const send = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || !conversationId || sending) return;
+
+    // 한글로 썼다면 보내지 않고 예시를 보여 준다.
+    //
+    // 보내 버리면 세 가지가 한꺼번에 잘못된다: 한국어 문장이 "잘 썼어요"로 교정되고,
+    // AI 대화 횟수가 깎이고, 무엇보다 그 한국어가 그대로 영어 일기에 저장된다.
+    // 입력창의 글은 지우지 않는다 — 사라지면 다시 써야 한다.
+    if (isKoreanInput(trimmed)) {
+      setKoreanHelp(helpFromKorean(trimmed, chatLanguage));
+      setLimitMessage(null);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      return;
+    }
+    setKoreanHelp(null);
 
     const allowed = checkAiTurnAllowed(usage.getToday(), trimmed);
     if (!allowed.allowed) {
@@ -339,6 +358,20 @@ export default function ChatScreen() {
             <InkLoading message="오늘의 이야기를 한 장에 담고 있어요" />
           ) : null}
 
+          {koreanHelp ? (
+            <KoreanHelpCard
+              help={koreanHelp}
+              language={chatLanguage}
+              onUse={(text) => {
+                setInput(text);
+                setKoreanHelp(null);
+              }}
+              onSpeak={(text) => speak(text, { language: chatLanguage, rate: voice.speechRate })}
+              onOpenBuilder={() => setBuilderOpen(true)}
+              onDismiss={() => setKoreanHelp(null)}
+            />
+          ) : null}
+
           {limitMessage ? (
             <Card soft>
               <AppText variant="bodySmall" color="secondary">
@@ -361,8 +394,10 @@ export default function ChatScreen() {
                   listening
                     ? '듣고 있어요…'
                     : chatLanguage === 'en'
-                      ? '오늘 있었던 일을 영어로 말해보세요'
-                      : '今日のことを日本語で書いてみましょう'
+                      ? // 한국어로 써도 된다는 걸 여기서 알려준다. 모르면 첫 문장에서 막히고,
+                        // 막히면 앱을 닫는다.
+                        '영어로 말해보세요 — 한국어로 써도 괜찮아요'
+                      : '日本語で書いてみましょう — 韓国語でも大丈夫'
                 }
                 value={input}
                 onChangeText={setInput}
@@ -388,6 +423,24 @@ export default function ChatScreen() {
               disabled={!input.trim() || sending}
             />
           </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <Button
+              size="compact"
+              variant="ghost"
+              icon="help-circle"
+              label={
+                input.trim() && isKoreanInput(input)
+                  ? `${chatLanguage === 'en' ? '영어' : '일본어'}로 어떻게 말해요?`
+                  : '문장 만들기'
+              }
+              onPress={() => {
+                const trimmed = input.trim();
+                // 한글을 써 둔 상태면 그 문장으로 예시를 만들고, 빈 상태면 바로 골라서 만든다
+                if (trimmed && isKoreanInput(trimmed)) setKoreanHelp(helpFromKorean(trimmed, chatLanguage));
+                else setBuilderOpen(true);
+              }}
+            />
+          </View>
           <Button
             variant="secondary"
             icon="mail"
@@ -406,6 +459,17 @@ export default function ChatScreen() {
           ) : null}
         </View>
       </View>
+
+      <SentenceBuilderSheet
+        visible={builderOpen}
+        language={chatLanguage}
+        onClose={() => setBuilderOpen(false)}
+        onUse={(text) => {
+          setInput(text);
+          setKoreanHelp(null);
+        }}
+        onSpeak={(text) => speak(text, { language: chatLanguage, rate: voice.speechRate })}
+      />
 
       <SpeakPractice
         visible={practiceTarget !== null}

@@ -1,0 +1,100 @@
+import { LearningLanguage } from '@/domain/types';
+
+/**
+ * 한글 도우미 타입.
+ *
+ * "한국어로 말하면 영어 예시를 보여주고, 그걸 읽어서 일기를 쓴다"를 위한 모듈이다.
+ * 외부 번역 API를 부르지 않는다(비용 0원·오프라인). 대신 사전과 문장 틀로 만든다.
+ * 그래서 **모든 문장을 번역할 수는 없고**, 못 만들면 못 만든다고 정직하게 말한다.
+ */
+
+/** 사전에 등록된 명사 (장소·사람·음식·사물) */
+export interface KoNoun {
+  ko: string;
+  /** 같은 뜻의 다른 표기 (예: 얘기 ↔ 이야기) */
+  alt?: string[];
+  /** 영어 명사구 — 관사까지 포함해 적는다 ("a café", "work", "the gym") */
+  en: string;
+  ja: string;
+  /**
+   * "집에 갔어" → "I went home" 처럼 to를 붙이면 안 되는 장소.
+   * (회사는 "went to work"라서 여기 해당하지 않는다)
+   */
+  bareDestination?: boolean;
+}
+
+export type PredicateSubject = 'i' | 'it';
+
+/** 동사 (갔어 / 먹었어 / 만났어 …) */
+export interface KoVerb {
+  id: string;
+  ko: string;
+  /** 과거형 어간 — 여기에 어미(어/어요/다/음…)가 붙는다 ("갔" → 갔어/갔어요/갔다) */
+  pastStem: string;
+  /** 현재형 표면형 (어간에서 규칙적으로 만들기 어려워 직접 적는다) */
+  presentForms: string[];
+  /** 미래형 표면형 앞부분 ("갈 거" → 갈 거야/갈 거예요) */
+  futureStems: string[];
+  en: { past: string; present: string; base: string };
+  ja: { past: string; present: string };
+  /**
+   * 문장을 어떻게 조립할지.
+   * - go: I went **to** {place}
+   * - meet: I met {person}
+   * - transitive: I {동사} {목적어}
+   * - intransitive: I {동사}
+   */
+  frame: 'go' | 'meet' | 'transitive' | 'intransitive';
+}
+
+/** 형용사·상태 (피곤해 / 좋았어 / 더웠어 …) */
+export interface KoAdjective {
+  ko: string;
+  /** 매칭할 표면형들 (피곤해, 피곤했어, 피곤하다 …) */
+  forms: string[];
+  en: string;
+  ja: string;
+  /** "I was tired" 인지 "It was hot" 인지 */
+  subject: PredicateSubject;
+}
+
+export type Tense = 'past' | 'present' | 'future';
+
+/** 한국어 문장에서 뽑아낸 조각들 */
+export interface KoParse {
+  /** 원문 */
+  source: string;
+  time: KoNoun | null;
+  person: KoNoun | null;
+  place: KoNoun | null;
+  object: KoNoun | null;
+  verb: KoVerb | null;
+  adjective: KoAdjective | null;
+  tense: Tense;
+  negated: boolean;
+  /** '너무·진짜' 같은 정도 부사가 있었는지 (영어의 so) */
+  intensified: boolean;
+  /** 사전에 없어서 뜻을 모르는 단어 (문장에 [단어]로 남는다) */
+  unknown: string[];
+}
+
+/** 한 문장에 대한 도움 */
+export interface KoSuggestion {
+  /** 배울 언어로 만든 예시 문장 */
+  text: string;
+  /** 사전에 없어 그대로 남은 단어들 — 사용자가 채워야 한다 */
+  unknown: string[];
+}
+
+export interface KoHelp {
+  language: LearningLanguage;
+  /** 만들어 낸 예시 문장들 (최대 3개, 없으면 빈 배열) */
+  suggestions: KoSuggestion[];
+  /**
+   * 예시를 못 만들었을 때 true. 화면은 이때 '문장 만들기'로 안내한다.
+   * (그럴듯한 가짜 번역을 지어내지 않는다)
+   */
+  needsBuilder: boolean;
+  /** 문장 전체는 못 만들었어도 아는 단어는 알려준다 */
+  words: { ko: string; target: string }[];
+}

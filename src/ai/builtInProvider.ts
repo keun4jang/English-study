@@ -1,5 +1,6 @@
 import { LearningLanguage } from '@/domain/types';
 import { AIProvider, AiTurnContext, FinalDiaryContext } from './provider';
+import { isKoreanInput } from './korean';
 import { applyRules, rulesFor, toCorrectionResult } from './rules';
 import { AiTurnResponse, FinalDiaryResult, aiTurnResponseSchema } from './schema';
 import { extractKeyword, pickReply } from './topics';
@@ -62,8 +63,14 @@ export class BuiltInAIProvider implements AIProvider {
   async createFinalDiary(ctx: FinalDiaryContext): Promise<FinalDiaryResult> {
     await delay(600);
 
-    // 사용자가 실제로 말한 문장만 쓴다 — 내용을 지어내지 않는다
-    const userMessages = ctx.messages.filter((m) => m.role === 'user' && m.text.trim());
+    // 사용자가 실제로 말한 문장만 쓴다 — 내용을 지어내지 않는다.
+    //
+    // 한국어로 쓴 문장은 일기 본문에서 뺀다. 영어 일기에 한국어가 섞여 저장되면 나중에
+    // 다시 읽을 때도, 공유할 때도 곤란하다. 화면에서 이미 한 번 막지만, 이전 버전에서
+    // 저장된 대화나 다른 경로로 들어온 문장이 있을 수 있어 여기서 한 번 더 거른다.
+    const userMessages = ctx.messages.filter(
+      (m) => m.role === 'user' && m.text.trim() && !isKoreanInput(m.text),
+    );
     const originalSentences = userMessages.map((m) => m.text.trim());
     const naturalSentences = userMessages.map((m) => (m.correctedText ?? m.text).trim());
 

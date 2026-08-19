@@ -3,6 +3,9 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { KoHelp, helpFromKorean, isKoreanInput } from '@/ai/korean';
+import { KoreanHelpCard } from '@/components/diary/KoreanHelpCard';
+import { SentenceBuilderSheet } from '@/components/diary/SentenceBuilderSheet';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -17,7 +20,26 @@ import { useUnsavedExit } from '@/lib/useUnsavedExit';
 import { useAuth } from '@/state/useAuth';
 import { useDiary } from '@/state/useDiary';
 import { useSettings } from '@/state/useSettings';
+import { speak } from '@/speech/tts';
 import { radius, spacing } from '@/theme/tokens';
+
+/** 지금 쓰고 있는 줄 — 빈 줄은 건너뛰고 마지막으로 글자가 있는 줄을 고른다 */
+function lastLine(text: string): string {
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+  return lines[lines.length - 1] ?? '';
+}
+
+/** 마지막 줄만 영어 문장으로 바꾼다 (앞에 써 둔 내용은 건드리지 않는다) */
+function replaceLastLine(text: string, replacement: string): string {
+  const lines = text.split('\n');
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    if (lines[i].trim()) {
+      lines[i] = replacement;
+      return lines.join('\n');
+    }
+  }
+  return replacement;
+}
 
 /** 직접 일기 쓰기 — 자동 임시 저장, 감정/태그/사진, 글자 수 표시 */
 export default function TextWriteScreen() {
@@ -33,6 +55,9 @@ export default function TextWriteScreen() {
   const [photos, setPhotos] = useState<DiaryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  /** 한글로 쓴 마지막 줄에 대한 예시 */
+  const [koreanHelp, setKoreanHelp] = useState<KoHelp | null>(null);
+  const [builderOpen, setBuilderOpen] = useState(false);
   const limits = getUsageLimits();
 
   // 자동 임시 저장
@@ -111,8 +136,8 @@ export default function TextWriteScreen() {
             label={language === 'en' ? '오늘의 일기 (영어)' : '오늘의 일기 (일본어)'}
             placeholder={
               language === 'en'
-                ? 'Write about your day… 짧아도 괜찮아요!'
-                : '今日のことを書いてみましょう。短くても大丈夫！'
+                ? 'Write about your day… 한국어로 써 두고 아래에서 영어 예시를 받아도 돼요'
+                : '今日のことを書いてみましょう。韓国語で書いてから例文をもらってもOK'
             }
             value={text}
             onChangeText={setText}
@@ -130,6 +155,43 @@ export default function TextWriteScreen() {
               </AppText>
             ) : null}
           </View>
+        </View>
+
+        {/*
+          한글로 써 두었을 때 예시를 만들어 준다.
+          일기 전체가 아니라 **마지막 줄**로 만든다 — 여러 문장을 한 번에 넘기면 조각이 뒤섞여
+          엉뚱한 문장이 나온다. 지금 쓰고 있는 줄이 지금 막힌 줄이다.
+        */}
+        {koreanHelp ? (
+          <KoreanHelpCard
+            help={koreanHelp}
+            language={language}
+            onUse={(sentence) => {
+              setText((prev) => replaceLastLine(prev, sentence));
+              setKoreanHelp(null);
+            }}
+            onSpeak={(sentence) => speak(sentence, { language })}
+            onOpenBuilder={() => setBuilderOpen(true)}
+            onDismiss={() => setKoreanHelp(null)}
+          />
+        ) : null}
+
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Button
+            size="compact"
+            variant="ghost"
+            icon="help-circle"
+            label={
+              isKoreanInput(lastLine(text))
+                ? `${language === 'en' ? '영어' : '일본어'}로 어떻게 말해요?`
+                : '문장 만들기'
+            }
+            onPress={() => {
+              const line = lastLine(text);
+              if (isKoreanInput(line)) setKoreanHelp(helpFromKorean(line, language));
+              else setBuilderOpen(true);
+            }}
+          />
         </View>
 
         <View style={{ gap: spacing.sm }}>
@@ -186,6 +248,16 @@ export default function TextWriteScreen() {
 
         <Button label="저장하기" onPress={save} disabled={!text.trim() || overLimit} />
       </View>
+
+      <SentenceBuilderSheet
+        visible={builderOpen}
+        language={language}
+        onClose={() => setBuilderOpen(false)}
+        onUse={(sentence) =>
+          setText((prev) => (prev.trim() ? `${prev.replace(/\s+$/, '')}\n${sentence}` : sentence))
+        }
+        onSpeak={(sentence) => speak(sentence, { language })}
+      />
 
       <ExitConfirmDialog
         visible={exit.pending}
