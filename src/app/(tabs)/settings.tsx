@@ -1,13 +1,14 @@
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Linking, Platform, Switch, View } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { OptionGroup } from '@/components/ui/OptionGroup';
 import { Screen } from '@/components/ui/Screen';
+import { Toggle } from '@/components/ui/Toggle';
 import { TextField } from '@/components/ui/TextField';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isBuiltInAI } from '@/ai';
@@ -22,7 +23,6 @@ import { useExpressions } from '@/state/useExpressions';
 import { useSettings } from '@/state/useSettings';
 import { useUsage } from '@/state/useUsage';
 import { spacing } from '@/theme/tokens';
-import { useTheme } from '@/theme/useTheme';
 
 function SectionTitle({ children }: { children: string }) {
   return (
@@ -43,7 +43,6 @@ function ToggleRow({
   value: boolean;
   onChange: (v: boolean) => void;
 }) {
-  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52 }}>
       <View style={{ flex: 1 }}>
@@ -54,16 +53,7 @@ function ToggleRow({
           </AppText>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ true: colors.primaryBorder, false: colors.borderStrong }}
-        // 지정하지 않으면 react-native-web 기본 청록색(#009688)이 나와 팔레트와 어긋난다
-        thumbColor={colors.surfaceRaised}
-        ios_backgroundColor={colors.borderStrong}
-        accessibilityLabel={label}
-        accessibilityState={{ checked: value }}
-      />
+      <Toggle value={value} onValueChange={onChange} accessibilityLabel={label} />
     </View>
   );
 }
@@ -257,7 +247,15 @@ export default function SettingsTab() {
             }}
           />
           {!confirmDeleteAccount ? (
-            <Button small variant="ghost" label="계정 및 데이터 삭제" onPress={() => setConfirmDeleteAccount(true)} />
+            // 되돌릴 수 없는 동작이 로그아웃·백업과 똑같은 회색 버튼이면 위험도가 안 보인다
+            <Button
+              small
+              variant="ghost"
+              icon="trash-2"
+              label="계정 및 데이터 삭제"
+              onPress={() => setConfirmDeleteAccount(true)}
+              accessibilityHint="되돌릴 수 없어요. 누르면 한 번 더 확인합니다"
+            />
           ) : (
             <Card soft style={{ gap: spacing.sm }}>
               <AppText variant="bodySmall" color="error">

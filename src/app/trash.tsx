@@ -18,12 +18,12 @@ export default function TrashScreen() {
 
   return (
     <Screen>
-      <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.lg, flex: 1 }}>
         <AppText variant="caption" color="secondary">
           휴지통의 일기는 {retentionDays}일 후 자동으로 삭제돼요.
         </AppText>
         {trashed.length === 0 ? (
-          <EmptyState icon="trash-2" title="휴지통이 비어 있어요" />
+          <EmptyState fill icon="trash-2" title="휴지통이 비어 있어요" />
         ) : (
           trashed.map((entry) => (
             <Card key={entry.id} style={{ gap: spacing.sm }}>

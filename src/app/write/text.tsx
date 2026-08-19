@@ -125,7 +125,7 @@ export default function TextWriteScreen() {
         </View>
 
         <View style={{ gap: spacing.sm }}>
-          <AppText variant="subheading">오늘의 감정</AppText>
+          <AppText variant="label">오늘의 감정</AppText>
           <EmotionPicker value={emotion} onChange={setEmotion} />
         </View>
 
@@ -138,7 +138,7 @@ export default function TextWriteScreen() {
         />
 
         <View style={{ gap: spacing.sm }}>
-          <AppText variant="subheading">
+          <AppText variant="label">
             사진 ({photos.length}/{limits.maxPhotosPerDiary})
           </AppText>
           <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>

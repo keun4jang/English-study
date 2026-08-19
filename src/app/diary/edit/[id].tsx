@@ -59,7 +59,7 @@ export default function DiaryEdit() {
           </AppText>
         </View>
         <View style={{ gap: spacing.sm }}>
-          <AppText variant="subheading">감정</AppText>
+          <AppText variant="label">감정</AppText>
           <EmotionPicker value={emotion} onChange={setEmotion} />
         </View>
         <TextField label="태그" value={tagsInput} onChangeText={setTagsInput} autoCapitalize="none" />

@@ -29,7 +29,7 @@ export default function FriendsTab() {
 
   return (
     <Screen>
-      <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.lg, flex: 1 }}>
         <Card style={{ gap: spacing.sm, alignItems: 'center' }}>
           <AppText variant="caption" color="secondary">
             나의 친구 코드
@@ -48,6 +48,7 @@ export default function FriendsTab() {
         </Card>
 
         <EmptyState
+          fill
           icon="users"
           title="친구 기능은 준비 중이에요"
           description={

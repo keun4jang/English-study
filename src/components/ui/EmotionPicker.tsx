@@ -15,8 +15,9 @@ const EMOTION_ICONS: Record<Emotion, MciName> = {
   happy: 'emoticon-happy-outline',
   calm: 'emoticon-outline',
   excited: 'emoticon-excited-outline',
-  grateful: 'emoticon-kiss-outline',
-  tired: 'emoticon-dead-outline',
+  grateful: 'hand-heart',
+  // 'emoticon-dead-outline'(눈이 X자)은 피곤함이 아니라 기절/사망처럼 읽힌다
+  tired: 'sleep',
   sad: 'emoticon-sad-outline',
   anxious: 'emoticon-confused-outline',
   angry: 'emoticon-angry-outline',
@@ -96,14 +97,18 @@ export function EmotionPicker({ value, onChange }: EmotionPickerProps) {
               gap: 2,
             })}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <AppMciIcon
-                name={EMOTION_ICONS[emotion]}
-                size={24}
-                color={selected ? 'accent' : 'secondary'}
-              />
-              {selected ? <AppIcon name="check" size={12} color="accent" /> : null}
-            </View>
+            {/* 체크를 얼굴 아이콘과 같은 줄에 두면 선택했을 때 얼굴이 왼쪽으로 밀린다.
+                선택 표시는 모서리 배지로 띄워 아이콘 위치를 고정한다. */}
+            {selected ? (
+              <View style={{ position: 'absolute', top: 4, right: 4 }}>
+                <AppIcon name="check" size={12} color="accent" />
+              </View>
+            ) : null}
+            <AppMciIcon
+              name={EMOTION_ICONS[emotion]}
+              size={24}
+              color={selected ? 'accent' : 'secondary'}
+            />
             <AppText
               variant="caption"
               weight={selected ? '600' : '400'}

@@ -137,9 +137,11 @@ export default function ExpressionsScreen() {
                 </AppText>
                 <MasteryBadge reviewCount={currentTarget.reviewCount} />
               </View>
+              {/* ghost(테두리만 있는 전체폭)면 바로 아래 4지선다 보기 상자와 생김새가 같아
+                  무엇이 버튼인지 헷갈린다. 다른 화면의 듣기 버튼과 같은 모양으로 맞춘다. */}
               <Button
                 size="compact"
-                variant="ghost"
+                variant="secondary"
                 icon="volume-2"
                 label="발음 듣기"
                 onPress={() =>

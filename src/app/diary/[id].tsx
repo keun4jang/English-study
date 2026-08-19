@@ -188,7 +188,9 @@ export default function DiaryDetail() {
         ) : null}
 
         {hasCorrectionDiff ? (
-          <Card variant="soft" style={{ gap: spacing.sm }}>
+          // 접힌 상태에서는 카드 안에 버튼 하나뿐이라, 같은 색 테두리 상자가 이중으로
+          // 겹쳐 보였다. 토글은 카드 밖에 두고 펼쳤을 때만 카드를 보여 준다.
+          <View style={{ gap: spacing.sm, alignItems: 'flex-start' }}>
             <Button
               size="compact"
               variant="ghost"
@@ -197,11 +199,13 @@ export default function DiaryDetail() {
               onPress={() => setShowOriginal((v) => !v)}
             />
             {showOriginal ? (
-              <AppText variant="bodySmall" color="secondary">
-                {entry.originalText}
-              </AppText>
+              <Card variant="soft" style={{ alignSelf: 'stretch' }}>
+                <AppText variant="bodySmall" color="secondary">
+                  {entry.originalText}
+                </AppText>
+              </Card>
             ) : null}
-          </Card>
+          </View>
         ) : null}
 
         {entry.tags.length > 0 ? (

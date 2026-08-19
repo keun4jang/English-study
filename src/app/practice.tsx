@@ -28,6 +28,7 @@ export default function PracticeScreen() {
     return (
       <Screen>
         <EmptyState
+          fill
           icon="mic"
           title="아직 연습할 문장이 없어요"
           description={'AI와 대화하며 교정을 받으면\n배운 문장이 여기에 모여요.'}

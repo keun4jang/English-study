@@ -25,7 +25,9 @@ const VISIBILITY_LABELS: Record<DiaryEntry['visibility'], string> = {
 
 /** 검색/타임라인용 일기 카드 */
 export function DiaryCard({ entry, onPress, showDate = true }: DiaryCardProps) {
-  const preview = entry.finalText.replace(/\s+/g, ' ').slice(0, 90);
+  // 글자 수로 자르면 단어 중간에서 끊기고 줄 끝에 빈 공간이 남는다.
+  // 아래 numberOfLines가 줄 단위로 자연스럽게 자르도록 원문을 그대로 넘긴다.
+  const preview = entry.finalText.replace(/\s+/g, ' ').trim();
   const cover = entry.photos.find((p) => p.isCover) ?? entry.photos[0];
 
   return (
@@ -43,9 +45,17 @@ export function DiaryCard({ entry, onPress, showDate = true }: DiaryCardProps) {
                 {formatDateKo(entry.localDate)}
               </AppText>
             ) : null}
-            <AppText variant="subheading" numberOfLines={1}>
-              {entry.title || (entry.language === 'en' ? 'Untitled' : '無題')}
-            </AppText>
+            {entry.title ? (
+              <AppText variant="subheading" numberOfLines={1}>
+                {entry.title}
+              </AppText>
+            ) : (
+              // 제목이 없으면 자리표시자를 강조하지 않는다. 예전에는 'Untitled'가
+              // 카드에서 가장 굵고 진한 글자라 정작 일기 내용보다 눈에 띄었다.
+              <AppText variant="bodySmall" color="secondary" numberOfLines={1}>
+                제목 없는 일기
+              </AppText>
+            )}
           </View>
           {entry.isFavorite ? (
             <AppIcon name="bookmark" size={16} color="accent" decorative={false} accessibilityLabel="즐겨찾기" />

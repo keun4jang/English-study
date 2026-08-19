@@ -8,6 +8,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { emotionIconName } from '@/components/ui/EmotionPicker';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Screen } from '@/components/ui/Screen';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { formatDateKo, monthInfo, todayKey } from '@/lib/dates';
@@ -195,9 +196,13 @@ export default function CalendarTab() {
         <View style={{ gap: spacing.md }}>
           <AppText variant="subheading">{formatDateKo(selectedDate)}</AppText>
           {selectedEntries.length === 0 ? (
-            <AppText variant="bodySmall" color="secondary">
-              이 날의 기록이 없어요. 지난 날의 기록이 없어도 괜찮아요.
-            </AppText>
+            <EmptyState
+              icon="feather"
+              title="이 날의 기록은 없어요"
+              description={'비어 있는 날이 있어도 괜찮아요.\n지금 이야기하면 오늘 날짜로 남아요.'}
+              actionLabel="AI와 이야기하기"
+              onAction={() => router.push('/write/chat')}
+            />
           ) : (
             <Card style={{ paddingVertical: spacing.xs }}>
               {selectedEntries.map((entry, i) => (
