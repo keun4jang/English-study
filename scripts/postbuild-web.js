@@ -83,11 +83,21 @@ const fontFaces = [
   )
   .join('');
 
+/**
+ * 한국어 줄바꿈 교정.
+ *
+ * 브라우저 기본값은 한글을 글자 단위로 끊어서 "내가 선택한 친구 / 에게만"처럼 어절
+ * 중간에서 줄이 바뀐다. keep-all로 어절을 지키고, 대신 띄어쓰기 없이 긴 영어 단어가
+ * 칸을 넘치지 않도록 overflow-wrap을 함께 둔다.
+ */
+const koreanWrapCss =
+  'body,#root{word-break:keep-all;overflow-wrap:break-word;}';
+
 const headTags = [
   // 첫 화면에서 바로 쓰는 두 굵기만 미리 받는다. Bold까지 preload하면 초기 네트워크 경쟁이 커진다.
   `<link rel="preload" href="${baseUrl}fonts/suit-regular.woff2" as="font" type="font/woff2" crossorigin/>`,
   `<link rel="preload" href="${baseUrl}fonts/suit-semibold.woff2" as="font" type="font/woff2" crossorigin/>`,
-  `<style>${fontFaces}</style>`,
+  `<style>${fontFaces}${koreanWrapCss}</style>`,
   `<link rel="manifest" href="${baseUrl}manifest.json"/>`,
   '<meta name="theme-color" content="#E0A82E"/>',
   `<link rel="apple-touch-icon" href="${baseUrl}icons/icon-180.png"/>`,

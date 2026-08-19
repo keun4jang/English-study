@@ -62,6 +62,11 @@ describe.each(['light', 'dark'] as const)('%s 테마 대비', (scheme) => {
     expect(contrast(colors.onPrimary, colors.primary)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('위험 버튼 위 글자(onError/error)', () => {
+    // onPrimary를 재사용하면 어두운 글자가 어두운 빨강에 묻힌다 — 실제로 겪은 회귀다
+    expect(contrast(colors.onError, colors.error)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each([
     ['success', 'successSoft'],
     ['warning', 'warningSoft'],

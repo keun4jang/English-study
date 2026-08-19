@@ -17,7 +17,8 @@ import { spacing } from '@/theme/tokens';
 
 function StatCard({ icon, label, value }: { icon: React.ComponentProps<typeof AppIcon>['name']; label: string; value: string }) {
   return (
-    <Card style={{ flex: 1, minWidth: 140, alignItems: 'center', gap: spacing.xs }}>
+    // flex:1이면 홀수 개일 때 마지막 카드만 혼자 전체 폭으로 늘어나 격자가 깨진다
+    <Card style={{ flexGrow: 0, flexBasis: '47%', alignItems: 'center', gap: spacing.xs }}>
       <AppIcon name={icon} size={22} color="accent" />
       <AppText variant="heading">{value}</AppText>
       <AppText variant="caption" color="secondary">

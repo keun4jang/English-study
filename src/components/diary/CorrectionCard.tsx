@@ -171,7 +171,7 @@ export function CorrectionCard({
 
       {/* 주요 액션 2개 + 더보기 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        <Button size="compact" icon="mic" label="다시 말해 보기" onPress={onSpeakAgain} />
+        <Button size="compact" icon="mic" label="다시 말해보기" onPress={onSpeakAgain} />
         <Button
           size="compact"
           variant="secondary"

@@ -215,8 +215,8 @@ export default function DiaryDetail() {
         ) : null}
 
         <AppText variant="caption" color="secondary">
-          공개 범위: {entry.visibility === 'private' ? '나만 보기' : entry.visibility} · 이 일기는 기기
-          안에만 있어요. 더보기 → 일기 공유하기를 누른 순간에만 밖으로 나갑니다 (사진 제외).
+          {entry.visibility === 'private' ? '나만 보기' : '공유됨'} · 이 일기는 기기 안에만 있어요.
+          더보기에서 공유를 누를 때만 밖으로 나가요 (사진은 빼고요).
         </AppText>
       </View>
     </Screen>

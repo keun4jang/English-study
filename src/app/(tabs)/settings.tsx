@@ -58,6 +58,9 @@ function ToggleRow({
         value={value}
         onValueChange={onChange}
         trackColor={{ true: colors.primaryBorder, false: colors.borderStrong }}
+        // 지정하지 않으면 react-native-web 기본 청록색(#009688)이 나와 팔레트와 어긋난다
+        thumbColor={colors.surfaceRaised}
+        ios_backgroundColor={colors.borderStrong}
         accessibilityLabel={label}
         accessibilityState={{ checked: value }}
       />
@@ -154,10 +157,10 @@ export default function SettingsTab() {
   };
 
   const sendFeedback = () => {
-    const subject = encodeURIComponent(`[${appConfig.appName}] 의견 보내기 (v${appConfig.version})`);
-    Linking.openURL(`mailto:${appConfig.feedbackEmail}?subject=${subject}`).catch(() => {
-      Linking.openURL(`${appConfig.repositoryUrl}/issues`).catch(() => {});
-    });
+    // 예전에는 자리표시자 주소(feedback@example.com)로 메일 앱을 열었다. 아무도 받지
+    // 않는 주소라 의견이 그냥 사라졌다. 실제로 도착하는 저장소 이슈로 보낸다.
+    const title = encodeURIComponent(`[의견] ${appConfig.appName} v${appConfig.version}`);
+    Linking.openURL(`${appConfig.repositoryUrl}/issues/new?title=${title}`).catch(() => {});
   };
 
   return (

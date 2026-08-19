@@ -30,7 +30,14 @@ export function IconButton({
     secondary: colors.primarySoft,
     ghost: 'transparent',
   };
-  const iconColor = variant === 'primary' ? colors.onPrimary : colors.primaryInk;
+  // 투명도만 낮추면 노란 배경 위 아이콘이 사라져 버튼이 고장난 것처럼 보인다.
+  // Button과 같은 방식으로 배경·색을 바꿔 "지금은 못 누른다"를 보여 준다.
+  const isMuted = Boolean(disabled) && variant !== 'ghost';
+  const iconColor = isMuted
+    ? colors.textSecondary
+    : variant === 'primary'
+      ? colors.onPrimary
+      : colors.primaryInk;
 
   return (
     <Pressable
@@ -44,10 +51,14 @@ export function IconButton({
         width: 48,
         height: 48,
         borderRadius: radius.button,
-        backgroundColor: pressed && variant !== 'primary' ? colors.selectedBackground : backgrounds[variant],
+        backgroundColor: isMuted
+          ? colors.surfaceSoft
+          : pressed && variant !== 'primary'
+            ? colors.selectedBackground
+            : backgrounds[variant],
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: disabled ? 0.5 : 1,
+        opacity: disabled && variant === 'ghost' ? 0.6 : 1,
         borderWidth: variant === 'ghost' ? 1 : 0,
         borderColor: colors.border,
         transform: [{ scale: pressed ? 0.98 : 1 }],

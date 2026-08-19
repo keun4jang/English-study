@@ -25,6 +25,14 @@ interface Palette {
   primaryBorder: string;
   primarySoft: string;
   onPrimary: string;
+  /**
+   * 위험(삭제) 버튼 위의 글자색.
+   *
+   * onPrimary를 같이 쓰면 안 된다. 브랜드색이 밝은 노랑이라 onPrimary가 어두운 잉크인데,
+   * error는 어두운 빨강이어서 어두운 글자를 얹으면 라벨이 묻힌다. 실제로 휴지통의
+   * "영구 삭제" 라벨이 2.5:1까지 떨어졌었다.
+   */
+  onError: string;
   accentRose: string;
   accentRoseSoft: string;
   accentSage: string;
@@ -72,6 +80,7 @@ export const palette: Record<'light' | 'dark', Palette> = {
     primaryBorder: '#B07F14',
     primarySoft: '#FBEFD2',
     onPrimary: '#2E2412',
+    onError: '#FFFFFF',
     accentRose: '#A34A5C',
     accentRoseSoft: '#F8E7EA',
     accentSage: '#4F7457',
@@ -111,6 +120,8 @@ export const palette: Record<'light' | 'dark', Palette> = {
     primaryBorder: '#F0C86A',
     primarySoft: '#46381D',
     onPrimary: '#2A2113',
+    // 다크에서는 error가 밝은 분홍이라 어두운 글자를 얹는다
+    onError: '#3A1D20',
     accentRose: '#E7A3AE',
     accentRoseSoft: '#472D35',
     accentSage: '#A9C9A9',

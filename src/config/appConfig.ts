@@ -11,8 +11,6 @@ export const appConfig = {
   tagline: '말한 하루가 외국어 일기가 되는 데일리 로그',
   /** 앱 버전 — app.json(expo.version)과 package.json에서 동기화됨 */
   version: Constants.expoConfig?.version ?? '0.0.0',
-  /** 피드백 수신 이메일 (의견 보내기 메뉴에서 사용) */
-  feedbackEmail: 'feedback@example.com',
   /** GitHub 저장소 (버그 제보 링크) */
   repositoryUrl: 'https://github.com/keun4jang/English-study',
   /**

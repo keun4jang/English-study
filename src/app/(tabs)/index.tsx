@@ -166,6 +166,8 @@ export default function TodayHome() {
     <Screen>
       <View style={{ gap: spacing.x20 }}>
         {/* 배경 위 인사말 — 카드로 감싸지 않는다 */}
+        {/* 인사말 블록 — 날짜/이름은 붙이고, 그 아래 부가 안내 두 줄은 한 문단처럼 읽히지
+            않도록 간격을 벌린다 */}
         <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" color="secondary">
             {formatDateKo(today)}
@@ -178,7 +180,7 @@ export default function TodayHome() {
             </AppText>
           ) : null}
           {isBuiltInAI() ? (
-            <AppText variant="caption" color="secondary">
+            <AppText variant="caption" color="secondary" style={{ marginTop: spacing.xs }}>
               내장 AI로 동작 중이에요 — 무료이고 인터넷 없이도 쓸 수 있어요
             </AppText>
           ) : null}

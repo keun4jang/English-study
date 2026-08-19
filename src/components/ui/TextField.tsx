@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { StyleProp, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import {
+  Platform,
+  StyleProp,
+  TextInput,
+  TextInputProps,
+  TextStyle,
+  View,
+  ViewStyle,
+} from 'react-native';
 
 import { radius, spacing, typography } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -12,6 +20,17 @@ interface TextFieldProps extends TextInputProps {
 }
 
 /** 입력창 — 인지가 필요한 경계는 borderStrong, 포커스 시 primary 2px */
+/**
+ * 브라우저 기본 포커스 링을 끈다.
+ *
+ * 입력창에 포커스가 가면 브랜드 색 2px 테두리를 직접 그리는데, 그 위에 브라우저 기본
+ * 검정 실선이 겹쳐 그려져 색이 어긋나 보였다. 포커스 표시 자체는 아래 borderColor로
+ * 계속 유지되므로 접근성은 그대로다. (outlineStyle은 RN 타입에 없고 웹에서만 동작한다)
+ */
+const WEB_OUTLINE_RESET = (Platform.OS === 'web' ? { outlineStyle: 'none' } : null) as
+  | TextStyle
+  | null;
+
 export function TextField({ label, error, containerStyle, style, onFocus, onBlur, ...rest }: TextFieldProps) {
   const { colors, scheme } = useTheme();
   const [focused, setFocused] = useState(false);
@@ -49,6 +68,7 @@ export function TextField({ label, error, containerStyle, style, onFocus, onBlur
             color: colors.textPrimary,
             minHeight: 48,
           },
+          WEB_OUTLINE_RESET,
           style,
         ]}
       />

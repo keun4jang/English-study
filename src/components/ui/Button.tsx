@@ -56,9 +56,16 @@ export function Button({
     ghost: colors.pressedBackground,
     danger: colors.error,
   };
-  const textColor =
-    variant === 'primary' || variant === 'danger'
-      ? colors.onPrimary
+  // 비활성은 투명도로 흐리게 만들지 않는다. 흐려진 노랑 위의 금색 글씨가 2:1대까지
+  // 떨어져 라벨이 안 읽혔다. 대신 차분한 배경 + 보조 글자색으로 "지금은 못 누른다"를
+  // 보여 주고 가독성은 지킨다.
+  const isMuted = Boolean(disabled) && variant !== 'ghost';
+  const textColor = isMuted
+    ? colors.textSecondary
+    : variant === 'danger'
+      ? colors.onError
+      : variant === 'primary'
+        ? colors.onPrimary
       : variant === 'secondary'
         ? colors.primaryInk
         : colors.textSecondary;
@@ -77,15 +84,25 @@ export function Button({
           paddingHorizontal: icon ? spacing.lg : spacing.x20,
           paddingVertical: spacing.sm,
           borderRadius: radius.button,
-          backgroundColor: pressed ? pressedBackgrounds[variant] : backgrounds[variant],
+          backgroundColor: isMuted
+            ? colors.surfaceSoft
+            : pressed
+              ? pressedBackgrounds[variant]
+              : backgrounds[variant],
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row',
           gap: spacing.sm,
-          opacity: disabled ? 0.55 : 1,
+          opacity: disabled && variant === 'ghost' ? 0.6 : 1,
           // 노란 채움 버튼은 크림 배경 위에서 경계가 흐려진다 — 진한 금색 테두리로 형태를 지킨다
-          borderWidth: variant === 'ghost' || variant === 'primary' ? 1 : 0,
-          borderColor: variant === 'primary' ? colors.primaryBorder : colors.border,
+          // secondary도 테두리를 준다. 옅은 노랑 채움이 크림 배경과 거의 같은 밝기라
+          // 테두리가 없으면 버튼으로 안 보였다 (같은 줄의 다른 버튼만 테두리가 있어 더 어색했다).
+          borderWidth: variant === 'danger' ? 0 : 1,
+          borderColor: isMuted
+            ? colors.border
+            : variant === 'primary' || variant === 'secondary'
+              ? colors.primaryBorder
+              : colors.border,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
         style,

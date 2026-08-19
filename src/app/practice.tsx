@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 
@@ -30,6 +31,8 @@ export default function PracticeScreen() {
           icon="mic"
           title="아직 연습할 문장이 없어요"
           description={'AI와 대화하며 교정을 받으면\n배운 문장이 여기에 모여요.'}
+          actionLabel="AI와 이야기하러 가기"
+          onAction={() => router.push('/write/chat')}
         />
       </Screen>
     );
@@ -70,7 +73,7 @@ export default function PracticeScreen() {
                 <Button
                   size="compact"
                   icon="mic"
-                  label={done ? '한 번 더 말해보기' : '다시 말해 보기'}
+                  label={done ? '한 번 더 말해보기' : '다시 말해보기'}
                   onPress={() => setTarget(item)}
                 />
               </View>
