@@ -1,6 +1,7 @@
 import { LearningLanguage } from '@/domain/types';
 import { doVerbOf } from './parse';
-import { KoNoun, KoParse, KoSuggestion } from './types';
+import { romanize } from './romanize';
+import { KoNoun, KoParse, KoSuggestion, KoUnknown } from './types';
 
 /**
  * 조각(KoParse)을 배울 언어의 문장으로 조립한다.
@@ -9,11 +10,30 @@ import { KoNoun, KoParse, KoSuggestion } from './types';
  * 사용자는 그게 틀린 줄 모르고 그대로 일기에 쓰게 되고, 그건 도움이 아니라 피해다.
  */
 
-/** 사전에 없던 단어는 대괄호로 남겨 사용자가 채우게 한다 */
-function slot(noun: KoNoun | null, unknown: string[], index: number): string | null {
+/**
+ * 사전에 없던 단어는 대괄호로 남겨 사용자가 채우게 한다.
+ *
+ * **역할이 맞는 것만 꺼내 쓴다.** 앞에서부터 아무거나 꺼내 쓰면 장소가 목적어 자리로
+ * 들어가고 진짜 목적어는 사라진다. 조사가 없어서 역할을 모르는 말은 어느 자리에든
+ * 들어갈 수 있게 두되, 이미 다른 자리에서 쓴 말은 다시 쓰지 않는다.
+ */
+function takeUnknown(unknown: KoUnknown[], role: KoUnknown['role'], used: Set<string>): string | null {
+  const match =
+    unknown.find((item) => item.role === role && !used.has(item.word)) ??
+    unknown.find((item) => item.role === 'unknown' && !used.has(item.word));
+  if (!match) return null;
+  used.add(match.word);
+  return `[${match.word}]`;
+}
+
+function slot(
+  noun: KoNoun | null,
+  unknown: KoUnknown[],
+  role: KoUnknown['role'],
+  used: Set<string>,
+): string | null {
   if (noun) return noun.en;
-  const word = unknown[index];
-  return word ? `[${word}]` : null;
+  return takeUnknown(unknown, role, used);
 }
 
 /**
@@ -39,7 +59,7 @@ interface EnBuild {
   tail: string[];
 }
 
-function buildEnglish(parse: KoParse): EnBuild | null {
+function buildEnglish(parse: KoParse, used: Set<string>): EnBuild | null {
   const past = parse.tense === 'past';
   const future = parse.tense === 'future';
   const tail: string[] = [];
@@ -59,7 +79,8 @@ function buildEnglish(parse: KoParse): EnBuild | null {
     else be = isI ? "I'm" : "It's";
     const degree = parse.intensified && !parse.negated ? 'so ' : '';
     if (withPerson) tail.push(withPerson);
-    if (parse.place) tail.push(`at ${parse.place.en}`);
+    const where = slot(parse.place, parse.unknown, 'place', used);
+    if (where) tail.push(`at ${where}`);
     return { core: `${be} ${degree}${parse.adjective.en}`, tail };
   }
 
@@ -71,7 +92,8 @@ function buildEnglish(parse: KoParse): EnBuild | null {
     else if (parse.negated) core = past ? `I didn't ${doVerb.en.present}` : `I don't ${doVerb.en.present}`;
     else core = `I ${past ? doVerb.en.past : doVerb.en.present}`;
     if (withPerson) tail.push(withPerson);
-    if (parse.place) tail.push(`at ${parse.place.en}`);
+    const where = slot(parse.place, parse.unknown, 'place', used);
+    if (where) tail.push(`at ${where}`);
     return { core, tail };
   }
 
@@ -89,7 +111,7 @@ function buildEnglish(parse: KoParse): EnBuild | null {
   };
 
   if (verb.frame === 'go') {
-    const place = slot(parse.place, parse.unknown, 0);
+    const place = slot(parse.place, parse.unknown, 'place', used);
     // 어디에 갔는지가 없으면 문장이 되지 않는다 — 지어내지 않고 포기한다
     if (!place) return null;
     const destination = parse.place?.bareDestination ? place : `to ${place}`;
@@ -98,7 +120,11 @@ function buildEnglish(parse: KoParse): EnBuild | null {
   }
 
   if (verb.frame === 'meet') {
-    const person = parse.person ? parse.person.en : parse.object ? parse.object.en : slot(null, parse.unknown, 0);
+    const person = parse.person
+      ? parse.person.en
+      : parse.object
+        ? parse.object.en
+        : slot(null, parse.unknown, 'person', used);
     if (!person) return null;
     if (parse.place) tail.push(`at ${parse.place.en}`);
     return { core: conjugate(person), tail };
@@ -106,16 +132,18 @@ function buildEnglish(parse: KoParse): EnBuild | null {
 
   if (verb.frame === 'transitive') {
     // "친구를 기다렸어"처럼 사람이 목적어인 경우도 있다
-    const object = slot(parse.object ?? parse.person, parse.unknown, 0);
+    const object = slot(parse.object ?? parse.person, parse.unknown, 'object', used);
     if (!object) return null;
     if (withPerson && parse.object) tail.push(withPerson);
-    if (parse.place) tail.push(`at ${parse.place.en}`);
+    const where = slot(parse.place, parse.unknown, 'place', used);
+    if (where) tail.push(`at ${where}`);
     return { core: conjugate(object), tail };
   }
 
   // intransitive
   if (withPerson) tail.push(withPerson);
-  if (parse.place) tail.push(parse.place.bareDestination ? `at ${parse.place.en}` : `at ${parse.place.en}`);
+  const where = slot(parse.place, parse.unknown, 'place', used);
+  if (where) tail.push(`at ${where}`);
   return { core: conjugate(null), tail };
 }
 
@@ -156,15 +184,40 @@ function buildJapanese(parse: KoParse): string | null {
   return `${parts.join('')}${past ? verb.ja.past : verb.ja.present}。`;
 }
 
+/**
+ * 뜻이 거의 남지 않은 문장인지.
+ *
+ * "오늘 대구에서 촬영을 했어"에서 촬영과 대구를 둘 다 모르면 남는 건 "I did ... today"
+ * 뿐이다. 이건 도움이 아니라 오해를 부른다 — 사용자는 앱이 뭔가 이해했다고 생각한다.
+ * 서술어가 아무 뜻 없는 '하다'인데 목적어까지 모르면 아예 내놓지 않는다.
+ */
+function tooEmpty(parse: KoParse): boolean {
+  const genericDo = parse.verb?.id === 'do' && !doVerbOf(parse) && !parse.adjective;
+  return genericDo && !parse.object;
+}
+
+/** 사전에 없는 말 — 이름이면 이렇게 적으라고 제안한다 */
+function unknownHints(parse: KoParse, used: Set<string>): KoSuggestion['unknown'] {
+  return parse.unknown
+    .filter((item) => used.has(item.word))
+    .map((item) => ({
+      word: item.word,
+      // 지역·가게·사람 이름은 번역이 아니라 소리 나는 대로 적는 게 맞다
+      romanized: item.role === 'place' || item.role === 'person' ? romanize(item.word) : null,
+    }));
+}
+
 export function composeSuggestions(parse: KoParse, language: LearningLanguage): KoSuggestion[] {
-  const usedUnknown = parse.unknown.slice(0, 1);
+  if (tooEmpty(parse)) return [];
 
   if (language === 'ja') {
+    const jaUsed = new Set<string>();
     const text = buildJapanese(parse);
-    return text ? [{ text, unknown: usedUnknown }] : [];
+    return text ? [{ text, unknown: unknownHints(parse, jaUsed) }] : [];
   }
 
-  const built = buildEnglish(parse);
+  const used = new Set<string>();
+  const built = buildEnglish(parse, used);
   if (!built) return [];
 
   const time = parse.time?.en ?? null;
@@ -172,9 +225,10 @@ export function composeSuggestions(parse: KoParse, language: LearningLanguage): 
   const base = joinSentence([built.core, ...tail, time]);
   if (!base) return [];
 
-  const suggestions: KoSuggestion[] = [{ text: base, unknown: usedUnknown }];
+  const unknown = unknownHints(parse, used);
+  const suggestions: KoSuggestion[] = [{ text: base, unknown }];
 
-  // 두 번째 예시: 시간을 앞으로 빼서 자연스럽게 ("Today I went to a café.")
+  // 두 번째 예시: 시간을 앞으로 빼서 자연스럽게 ("Today I went to a cafe.")
   if (time && !time.startsWith('in ') && !time.startsWith('at ') && !time.startsWith('over ')) {
     // 시간을 앞으로 빼면 그 뒤는 문장 첫 글자가 아니다 — 대문자를 되돌린다.
     // 단 'I'는 문장 어디에 있든 대문자다.
@@ -186,13 +240,13 @@ export function composeSuggestions(parse: KoParse, language: LearningLanguage): 
       rest,
       ...tail,
     ]);
-    if (fronted !== base) suggestions.push({ text: fronted, unknown: usedUnknown });
+    if (fronted !== base) suggestions.push({ text: fronted, unknown });
   }
 
   // 먹다는 had가 더 자주 쓰인다 — 같은 뜻의 다른 말도 보여 준다
   if (parse.verb?.id === 'eat' && parse.tense === 'past' && !parse.negated) {
     const casual = base.replace(/^I ate /, 'I had ');
-    if (casual !== base) suggestions.push({ text: casual, unknown: usedUnknown });
+    if (casual !== base) suggestions.push({ text: casual, unknown });
   }
 
   return suggestions.slice(0, 3);

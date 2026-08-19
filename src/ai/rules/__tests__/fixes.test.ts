@@ -110,3 +110,39 @@ describe('한 문장에서 여러 규칙이 함께 적용된다', () => {
     expect(result.severity).toBe('major');
   });
 });
+
+const fix = (input: string) => applyRules(input, 'en', rulesFor('en')).corrected;
+const severity = (input: string) => applyRules(input, 'en', rulesFor('en')).severity;
+
+describe('시간 표현을 주어로 쓴 문장', () => {
+  /**
+   * 한국어는 주어를 생략하니까 "오늘 대구에서 촬영했어"가 "today is shooting in daegu"로
+   * 나온다. Today is ~ 자체는 맞는 문장이라("Today is my birthday.") 그냥 통과하기 쉬웠다.
+   */
+  it.each([
+    ['today is shooting in daegu', "Today I'm shooting in daegu."],
+    ['today is studying at the library', "Today I'm studying at the library."],
+    ['Yesterday is working late', 'Yesterday I was working late.'],
+    ['Last night was working until 2am', 'Last night I was working until 2am.'],
+    ['This morning is running in the park', 'This morning I was running in the park.'],
+  ])('%s → %s', (input, expected) => {
+    expect(fix(input)).toBe(expected);
+  });
+
+  it('날씨는 주어가 it이다', () => {
+    expect(fix('Today is raining')).toBe("Today it's raining.");
+    expect(fix('Yesterday is snowing')).toBe('Yesterday it was snowing.');
+  });
+
+  it.each([
+    'Today is my birthday',
+    'Today is a good day',
+    'Today is the last day',
+    'Today is shooting day',
+    'Today is shooting day for our team',
+    'Today is great',
+    'It is raining today',
+  ])('멀쩡한 문장은 건드리지 않는다: %s', (input) => {
+    expect(severity(input)).toBe('correct');
+  });
+});

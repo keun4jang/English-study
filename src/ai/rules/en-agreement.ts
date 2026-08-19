@@ -297,7 +297,111 @@ const PAST_STARTERS: readonly string[] = [
 /* 규칙                                                                 */
 /* ------------------------------------------------------------------ */
 
+
+/* ---------- 시간 표현을 주어로 쓴 문장 ---------- */
+
+/**
+ * "Today is shooting in Daegu."
+ *
+ * 한국어는 주어를 생략하니까 "오늘 대구에서 촬영했어"를 그대로 옮기면 시간 표현이
+ * 주어 자리에 남는다. 아주 자주 나오는데, 문장이 문법적으로는 멀쩡해 보여서
+ * (Today is ~ 는 "Today is my birthday."처럼 맞는 문장이기도 하다) 그냥 통과하기 쉽다.
+ *
+ * 그래서 두 겹으로 막는다. 뒤에 오는 -ing 동사를 목록으로 제한하고, 그 뒤가
+ * 전치사·부사로 이어질 때만 고친다. "Today is shooting day."(촬영 날)는 건드리지 않는다.
+ */
+const TIME_SUBJECTS = String.raw`today|yesterday|tonight|this\s+morning|this\s+afternoon|this\s+evening|last\s+night|last\s+weekend|last\s+week|the\s+weekend`;
+
+/** 시간 표현이 주어로 잘못 쓰였을 때, 실제 주어가 '나'인 게 분명한 동사들 */
+const ING_ACTIVITIES: readonly string[] = [
+  'shooting', 'filming', 'recording', 'working', 'studying', 'cooking',
+  'cleaning', 'resting', 'running', 'swimming', 'walking', 'reading',
+  'writing', 'watching', 'eating', 'drinking', 'meeting', 'traveling',
+  'travelling', 'shopping', 'practicing', 'practising', 'exercising',
+  'moving', 'packing', 'driving', 'waiting', 'studying', 'hiking',
+  'camping', 'volunteering', 'interviewing', 'presenting',
+];
+
+/** 날씨는 주어가 내가 아니라 it이다 */
+const ING_WEATHER: readonly string[] = ['raining', 'snowing', 'pouring', 'drizzling', 'hailing'];
+
+/**
+ * -ing 뒤가 전치사·부사로 이어질 때만 고친다.
+ * "Today is shooting **in** Daegu."는 고치고, "Today is shooting **day**."는 두는 기준.
+ */
+const ING_TAIL = String.raw`(?=\s+(?:in|at|on|with|for|from|to|about|near|around|until|till|after|before|all\s+day|again|now|hard|late|early|alone|together|outside|inside)\b|[.,!?;]|$)`;
+
+/**
+ * 과거 시점을 가리키는 시간 표현 — 이때는 be동사가 was여야 한다.
+ * '오늘 아침'은 일기를 쓰는 시점에서 보면 이미 지난 일이라 여기에 넣는다.
+ * 반면 'tonight'과 'this evening'은 아직 안 왔을 수도 있어 넣지 않는다.
+ */
+const PAST_TIME_SUBJECT = /^(?:yesterday|last\s+night|last\s+weekend|last\s+week|this\s+morning)$/i;
+
+/** 문장 첫 글자를 대문자로 (사용자가 소문자로 쓰는 경우가 많다) */
+function capitalize(word: string): string {
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+}
+
 export const EN_AGREEMENT_RULES: CorrectionRule[] = [
+  {
+    id: 'en-agr-time-as-subject-activity',
+    language: 'en',
+    severity: 'major',
+    // "Today is shooting in Daegu." → "I'm shooting in Daegu today."
+    pattern: new RegExp(
+      String.raw`^(${TIME_SUBJECTS})\s+(is|was|are|were)\s+(${alt(ING_ACTIVITIES)})\b${ING_TAIL}`,
+      'i',
+    ),
+    replace: (match) => {
+      const time = (match[1] ?? '').toLowerCase();
+      const be = (match[2] ?? '').toLowerCase();
+      const verb = (match[3] ?? '').toLowerCase();
+      if (!time || !be || !verb) return null;
+      // 시제는 사용자가 쓴 것을 지킨다. 틀린 것(주어)만 고치고 뜻은 바꾸지 않는다.
+      // 다만 "yesterday is ~"처럼 앞뒤가 안 맞으면 시간 표현 쪽을 믿는다.
+      const past = PAST_TIME_SUBJECT.test(time) || be === 'was' || be === 'were';
+      // 시간 표현은 자리에 그대로 두고 주어만 넣는다. 문장 끝으로 옮기는 편이 조금 더
+      // 자연스럽지만, 그러려면 뒤 문장 전체를 삼켜야 해서 규칙이 훨씬 위험해진다.
+      // "Today I'm shooting in Daegu."도 충분히 자연스럽다.
+      return `${capitalize(time)} ${past ? 'I was' : "I'm"} ${verb}`;
+    },
+    explanationKo:
+      '"오늘"이나 "어제" 같은 시간 표현은 주어가 될 수 없어요. 내가 한 일이라면 주어 I를 함께 써 주세요.',
+    reasonKo: '시간 표현 → 주어 I',
+    keyExpression: {
+      expression: 'Today I ~',
+      meaningKo: '오늘 나는 ~해요',
+      example: "Today I'm working in Busan.",
+    },
+  },
+  {
+    id: 'en-agr-time-as-subject-weather',
+    language: 'en',
+    severity: 'major',
+    // "Today is raining." → "It's raining today."
+    pattern: new RegExp(
+      String.raw`^(${TIME_SUBJECTS})\s+(is|was|are|were)\s+(${alt(ING_WEATHER)})\b${ING_TAIL}`,
+      'i',
+    ),
+    replace: (match) => {
+      const time = (match[1] ?? '').toLowerCase();
+      const be = (match[2] ?? '').toLowerCase();
+      const verb = (match[3] ?? '').toLowerCase();
+      if (!time || !be || !verb) return null;
+      const past = PAST_TIME_SUBJECT.test(time) || be === 'was' || be === 'were';
+      // 날씨의 주어는 내가 아니라 it이다
+      return `${capitalize(time)} ${past ? 'it was' : "it's"} ${verb}`;
+    },
+    explanationKo:
+      '날씨를 말할 때 주어는 it이에요. "Today is raining."이 아니라 "It\'s raining today."처럼 써요.',
+    reasonKo: '날씨의 주어는 it',
+    keyExpression: {
+      expression: "Today it's raining",
+      meaningKo: '오늘 비가 와요',
+      example: "Today it's raining, so I stayed home.",
+    },
+  },
   /* ---------- 주어가 없는 문장 ---------- */
   {
     id: 'en-agr-subject-missing-past-verb',

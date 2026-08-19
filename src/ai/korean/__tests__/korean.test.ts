@@ -1,5 +1,6 @@
 import { composeFromFrame } from '../builder';
 import { helpFromKorean } from '../index';
+import { splitParticle } from '../parse';
 import { FOODS, PEOPLE, PLACES, THINGS, TIME_WORDS } from '../words';
 
 /**
@@ -84,10 +85,59 @@ describe('만들 수 없을 때', () => {
 
   it('사전에 없는 단어는 대괄호로 남겨 사용자가 채우게 한다', () => {
     const help = helpFromKorean('오늘 떡볶이 먹었어', 'en');
-    if (help.suggestions.length > 0) {
-      expect(help.suggestions[0].text).toContain('[떡볶이]');
-      expect(help.suggestions[0].unknown).toContain('떡볶이');
-    }
+    expect(help.suggestions[0].text).toBe('I ate [떡볶이] today.');
+    expect(help.suggestions[0].unknown).toEqual([{ word: '떡볶이', romanized: null }]);
+  });
+
+  it('뜻이 거의 안 남는 문장은 내놓지 않는다', () => {
+    // "I did ... today"만 남는다. 앱이 뭔가 이해한 것처럼 보여서 오히려 해롭다.
+    const help = helpFromKorean('오늘 그거 했어', 'en');
+    expect(help.suggestions).toHaveLength(0);
+    expect(help.needsBuilder).toBe(true);
+  });
+});
+
+describe('조사를 떼는 규칙', () => {
+  it.each([
+    ['떡볶이', '떡볶이', null],
+    ['떡볶이를', '떡볶이', '를'],
+    ['떡볶이랑', '떡볶이', '랑'],
+    ['촬영을', '촬영', '을'],
+    ['대구에서', '대구', '에서'],
+    ['노을을', '노을', '을'],
+    ['마을에', '마을', '에'],
+    ['고양이가', '고양이', '가'],
+    // 2글자 미만이 남는 분리는 하지 않는다 ('사과'를 '사'+'과'로 자르지 않기)
+    ['사과', '사과', null],
+  ])('%s → %s (+%s)', (word, base, particle) => {
+    expect(splitParticle(word)).toEqual({ base, particle });
+  });
+});
+
+describe('조사가 알려주는 자리를 지킨다', () => {
+  /**
+   * 실제로 있었던 버그: "오늘 대구에서 촬영을 했어"가
+   * "I did [대구에서] today."가 됐다. 장소가 목적어 자리로 들어가고 목적어는 사라졌다.
+   */
+  it('모르는 장소가 목적어 자리를 차지하지 않는다', () => {
+    const text = helpFromKorean('오늘 부산에서 라면 먹었어', 'en').suggestions[0].text;
+    expect(text).toBe('I ate ramen at [부산] today.');
+  });
+
+  it('모르는 말이 둘이면 각자 제 자리에 들어간다', () => {
+    const text = helpFromKorean('어제 강릉에서 물회를 먹었어', 'en').suggestions[0].text;
+    expect(text).toBe('I ate [물회] at [강릉] yesterday.');
+  });
+
+  it('모르는 장소는 이름으로 적는 법을 알려준다', () => {
+    const help = helpFromKorean('오늘 대구에서 라면 먹었어', 'en');
+    expect(help.suggestions[0].unknown).toEqual([{ word: '대구', romanized: 'Daegu' }]);
+  });
+
+  it('문장을 못 만들어도 이름 표기는 알려준다', () => {
+    const help = helpFromKorean('오늘 대구에서 그거 했어', 'en');
+    expect(help.suggestions).toHaveLength(0);
+    expect(help.nameHints).toEqual([{ ko: '대구', romanized: 'Daegu' }]);
   });
 });
 
@@ -133,5 +183,26 @@ describe('번들 폰트가 낼 수 있는 글자만 쓴다', () => {
     const words = [...FOODS, ...THINGS, ...PLACES, ...PEOPLE, ...TIME_WORDS];
     const bad = words.filter((w) => /[^\x20-\x7E]/.test(w.en)).map((w) => `${w.ko}=${w.en}`);
     expect(bad).toEqual([]);
+  });
+});
+
+describe("'명사 + 하다'는 띄어 써도 알아듣는다", () => {
+  // 맞춤법은 붙여 쓰는 게 맞지만 실제로는 띄어 쓰는 사람이 훨씬 많다
+  it.each([
+    ['오늘 운동 했어', 'I worked out today.'],
+    ['오늘 공부 했어요', 'I studied today.'],
+    ['오늘 청소 했어', 'I cleaned today.'],
+    ['어제 산책 했어', 'I took a walk yesterday.'],
+    ['오늘 요리 했어', 'I cooked today.'],
+  ])('%s → %s', (input, expected) => {
+    expect(first(input)).toBe(expected);
+  });
+
+  it('붙여 쓴 것과 결과가 같다', () => {
+    expect(first('오늘 운동 했어')).toBe(first('오늘 운동했어'));
+  });
+
+  it('사이에 낀 부정어를 잃지 않는다', () => {
+    expect(first('오늘 운동 안 했어')).toBe("I didn't work out today.");
   });
 });

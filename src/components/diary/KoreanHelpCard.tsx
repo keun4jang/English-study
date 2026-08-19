@@ -63,8 +63,15 @@ export function KoreanHelpCard({
           <AppText variant="correctionSentence">{suggestion.text}</AppText>
           {suggestion.unknown.length > 0 ? (
             <AppText variant="caption" color="warning">
-              {suggestion.unknown.map((word) => `[${word}]`).join(' ')}는 아직 모르는 단어예요. 이 부분만
-              직접 바꿔 주세요.
+              {suggestion.unknown.map((item) => `[${item.word}]`).join(' ')}는 사전에 없는 말이에요. 이
+              부분만 직접 바꿔 주세요
+              {suggestion.unknown.some((item) => item.romanized)
+                ? ` — 지역·가게·사람 이름이라면 ${suggestion.unknown
+                    .filter((item) => item.romanized)
+                    .map((item) => `${item.word} → ${item.romanized}`)
+                    .join(', ')} 처럼 소리 나는 대로 적으면 돼요`
+                : ''}
+              .
             </AppText>
           ) : null}
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -96,6 +103,12 @@ export function KoreanHelpCard({
           {help.words.length > 0 ? (
             <AppText variant="caption" color="secondary">
               아는 단어: {help.words.map((word) => `${word.ko} = ${word.target}`).join(' · ')}
+            </AppText>
+          ) : null}
+          {help.nameHints.length > 0 ? (
+            <AppText variant="caption" color="secondary">
+              지역·가게·사람 이름이라면 소리 나는 대로 적으면 돼요:{' '}
+              {help.nameHints.map((hint) => `${hint.ko} → ${hint.romanized}`).join(' · ')}
             </AppText>
           ) : null}
         </View>

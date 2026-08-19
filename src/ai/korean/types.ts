@@ -75,15 +75,36 @@ export interface KoParse {
   /** '너무·진짜' 같은 정도 부사가 있었는지 (영어의 so) */
   intensified: boolean;
   /** 사전에 없어서 뜻을 모르는 단어 (문장에 [단어]로 남는다) */
-  unknown: string[];
+  unknown: KoUnknown[];
+}
+
+/**
+ * 사전에 없는 단어.
+ *
+ * **역할(role)을 반드시 함께 들고 다닌다.** 예전에는 문자열만 모아 두고 필요할 때
+ * 앞에서부터 꺼내 썼는데, "오늘 대구에서 촬영을 했어"에서 장소(대구)가 목적어 자리로
+ * 들어가고 진짜 목적어(촬영)는 통째로 사라져 "I did [대구에서] today."가 나왔다.
+ * 조사가 알려주는 역할을 버린 것이 원인이었다.
+ */
+export interface KoUnknown {
+  /** 조사를 뗀 말 (대구에서 → 대구) */
+  word: string;
+  role: 'place' | 'object' | 'person' | 'unknown';
 }
 
 /** 한 문장에 대한 도움 */
 export interface KoSuggestion {
   /** 배울 언어로 만든 예시 문장 */
   text: string;
-  /** 사전에 없어 그대로 남은 단어들 — 사용자가 채워야 한다 */
-  unknown: string[];
+  /** 문장에 [단어]로 남은 말들 — 사용자가 채워야 한다 */
+  unknown: {
+    word: string;
+    /**
+     * 지역·가게·사람 이름이면 소리 나는 대로 적은 형태 (대구 → Daegu).
+     * 문장에 몰래 넣지 않고 제안만 한다 — 이름이 아닐 수도 있기 때문이다.
+     */
+    romanized: string | null;
+  }[];
 }
 
 export interface KoHelp {
@@ -97,4 +118,11 @@ export interface KoHelp {
   needsBuilder: boolean;
   /** 문장 전체는 못 만들었어도 아는 단어는 알려준다 */
   words: { ko: string; target: string }[];
+  /**
+   * 사전에 없지만 **이름으로 보이는 말** (장소·사람 자리에 온 모르는 말).
+   *
+   * 지역·가게·사람 이름은 사전을 아무리 키워도 다 담을 수 없고, 애초에 번역이 아니라
+   * 소리 나는 대로 적는 게 정답이다. 문장을 못 만들었을 때도 이것만은 알려줄 수 있다.
+   */
+  nameHints: { ko: string; romanized: string }[];
 }

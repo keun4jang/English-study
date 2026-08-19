@@ -1,4 +1,4 @@
-import { KoNoun, KoParse, KoVerb, Tense } from './types';
+import { KoNoun, KoParse, KoUnknown, KoVerb, Tense } from './types';
 import { ADJECTIVES, DO_VERBS, PAST_ENDINGS, VERBS } from './verbs';
 import { NOUN_INDEX, PEOPLE_INDEX, PLACE_INDEX, TIME_INDEX } from './words';
 
@@ -28,15 +28,74 @@ interface Token {
   particle: string | null;
 }
 
-/** 조사를 떼어낸다. 사전에 그 형태 그대로 있으면 떼지 않는다 (예: '오늘은'이 아니라 '밖') */
+/** 받침이 있는 음절인지 (조사가 붙는 규칙이 여기서 갈린다) */
+function hasBatchim(syllable: string): boolean {
+  const code = syllable.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return false;
+  return code % 28 !== 0;
+}
+
+/**
+ * 조사마다 앞말의 받침 조건이 다르다.
+ * true  = 받침이 있어야 붙는다 (책**을**, 동생**이랑**)
+ * false = 받침이 없어야 붙는다 (사과**를**, 친구**랑**)
+ * null  = 상관없다
+ */
+const BATCHIM_RULE: Record<string, boolean | null> = {
+  을: true, 이: true, 은: true, 과: true, 이랑: true, 으로: true,
+  를: false, 가: false, 는: false, 와: false, 랑: false, 로: false,
+  에: null, 에서: null, 하고: null, 에게: null, 한테: null, 도: null, 만: null,
+};
+
+/**
+ * 사전에 없는 말에서도 조사를 떼기 위해 쓰는 조사들.
+ *
+ * **역할을 알려주는 조사만** 넣는다. 주격·주제 조사(이/가/은/는)는 어차피 역할을 모르는
+ * 것으로 처리되니 뗄 이유가 없는데, '이'는 떡볶**이**·고양**이**처럼 낱말의 마지막 음절인
+ * 경우가 너무 많아서 넣으면 손해만 본다. (실제로 '떡볶이'가 '떡볶'으로 잘렸다)
+ */
+const ROLE_PARTICLES = [...PERSON_PARTICLES, ...PLACE_PARTICLES, ...OBJECT_PARTICLES];
+
+/**
+ * 조사를 떼어낸다.
+ *
+ * 1) 뗀 결과가 사전에 있으면 바로 인정한다.
+ * 2) 사전에 없는 말이어도, 역할을 알려주는 조사라면 떼어 본다. 모르는 말이라고 조사를
+ *    붙여 둔 채 넘기면 "[대구에서]"가 문장에 박히고, 무엇보다 그게 장소인지 목적어인지
+ *    알 수 없게 된다.
+ *
+ * 2)에는 두 개의 안전장치가 있다. 남는 말이 2글자 이상일 것(‘사과’를 ‘사’+‘과’로 자르지
+ * 않기 위해), 그리고 조사의 받침 규칙에 맞을 것. 그래도 둘 다 통과하는 후보가 여럿이면
+ * **덜 자르는 쪽**을 고른다 — 너무 많이 자르는 실수가 덜 자르는 실수보다 나쁘다.
+ */
 export function splitParticle(word: string): Token {
   for (const particle of ALL_PARTICLES) {
     if (!word.endsWith(particle) || word.length <= particle.length) continue;
     const base = word.slice(0, -particle.length);
-    // 조사를 뗀 결과가 사전에 있을 때만 인정한다 ('사과'를 '사'+'과'로 자르지 않도록)
     if (TIME_INDEX.has(base) || NOUN_INDEX.has(base)) return { base, particle };
   }
+
+  let best: Token | null = null;
+  for (const particle of ROLE_PARTICLES) {
+    if (!word.endsWith(particle)) continue;
+    const base = word.slice(0, -particle.length);
+    if (base.length < 2 || !/^[가-힣]+$/.test(base)) continue;
+    const rule = BATCHIM_RULE[particle];
+    if (rule !== null && rule !== undefined && hasBatchim(base[base.length - 1]) !== rule) continue;
+    if (!best || base.length > best.base.length) best = { base, particle };
+  }
+  if (best) return best;
+
   return { base: word, particle: null };
+}
+
+/** 조사가 알려주는 역할 */
+function roleOf(particle: string | null): KoUnknown['role'] {
+  if (particle === null) return 'unknown';
+  if (PLACE_PARTICLES.includes(particle)) return 'place';
+  if (OBJECT_PARTICLES.includes(particle)) return 'object';
+  if (PERSON_PARTICLES.includes(particle)) return 'person';
+  return 'unknown';
 }
 
 interface Predicate {
@@ -119,9 +178,28 @@ const LEFTOVER_ENDINGS = new Set([
   '고', '는데', '지만', '거', '걸', '까', '지', '겠', '더라', '구나', '군요',
 ]);
 
-/** 문장 끝의 마침표·물결·이모지를 걷어내고 공백을 정리한다 */
+/**
+ * '명사 + 하다'를 붙여 준다.
+ *
+ * "운동했어"와 "운동 했어"는 같은 말이지만, 띄어 쓰면 '운동'은 명사로 '했어'는 아무 뜻
+ * 없는 하다로 따로 잡혀서 "I did exercise"(어색) 또는 아예 못 만드는 문장이 된다.
+ * 맞춤법상으로도 붙여 쓰는 게 맞는데, 실제로는 띄어 쓰는 사람이 훨씬 많다.
+ *
+ * 부정어(안·못)가 사이에 끼면 앞으로 빼서 "안 운동했어" 꼴로 만든다. 어색한 한국어지만
+ * 이건 사람이 읽을 문장이 아니라 파서가 읽을 중간 형태다.
+ */
+const DO_VERB_SPACING = new RegExp(
+  `(${DO_VERBS.map((v) => v.ko).join('|')})\\s+((?:안|못)\\s+)?(하[아-힣]|했[아-힣]?|해[요]?|한다)`,
+  'g',
+);
+
+/** 문장 끝의 마침표·물결·이모지를 걷어내고 공백과 띄어쓰기를 정리한다 */
 function normalize(text: string): string {
-  return text.replace(/[.!?~…\s]+$/u, '').replace(/\s+/g, ' ').trim();
+  return text
+    .replace(/[.!?~…\s]+$/u, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(DO_VERB_SPACING, (_all, noun, negation, verb) => `${negation ?? ''}${noun}${verb}`);
 }
 
 export function parseKorean(input: string): KoParse {
@@ -196,8 +274,8 @@ export function parseKorean(input: string): KoParse {
     // 서술어를 잘라내고 남은 어미 조각(했'어', 갈 거'야')은 단어가 아니다
     if (LEFTOVER_ENDINGS.has(base)) continue;
 
-    // 사전에 없는 말 — 지어내지 않고 모른다고 기록한다
-    if (/[가-힣]/.test(base)) parsed.unknown.push(base);
+    // 사전에 없는 말 — 지어내지 않고, 조사가 알려주는 역할과 함께 기록한다
+    if (/[가-힣]/.test(base)) parsed.unknown.push({ word: base, role: roleOf(particle) });
   }
 
   return parsed;

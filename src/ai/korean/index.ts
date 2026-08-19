@@ -1,6 +1,7 @@
 import { LearningLanguage } from '@/domain/types';
 import { composeSuggestions } from './compose';
 import { parseKorean, splitParticle } from './parse';
+import { romanize } from './romanize';
 import { KoHelp } from './types';
 import { NOUN_INDEX, TIME_INDEX } from './words';
 
@@ -34,10 +35,16 @@ export function helpFromKorean(text: string, language: LearningLanguage): KoHelp
     words.push({ ko: noun.ko, target: language === 'ja' ? noun.ja : noun.en });
   }
 
+  // 장소·사람 자리에 온 모르는 말은 이름일 가능성이 높다 — 표기를 제안한다
+  const nameHints = parse.unknown
+    .filter((item) => item.role === 'place' || item.role === 'person')
+    .map((item) => ({ ko: item.word, romanized: romanize(item.word) }));
+
   return {
     language,
     suggestions,
     needsBuilder: suggestions.length === 0,
     words,
+    nameHints,
   };
 }
