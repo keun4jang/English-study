@@ -26,6 +26,12 @@ const PHRASE_END = String.raw`(?=\s*(?:[,.!?;:]|$)|\s+(?:and|but|or|so|because|s
 const ON_VERB_GUARD =
   /\b(?:count|counts|counted|counting|depend|depends|depended|depending|rely|relies|relied|relying|focus|focuses|focused|focusing|decide|decides|decided|deciding|agree|agrees|agreed|work|works|worked|working|based|spend|spends|spent|comment|commented)\s+on\b/i;
 
+/**
+ * "~에 관한"의 on을 쓰는 명사들. (a book on 2019 / the data on 2020)
+ * 이 뒤의 on은 시간 전치사가 아니라서 연도 규칙을 적용하면 안 된다.
+ */
+const ON_TOPIC_NOUNS = String.raw`book|books|article|articles|report|reports|data|study|studies|paper|papers|lecture|lectures|documentary|documentaries|chapter|chapters|essay|essays|blog|post|posts|news|research|movie|film|show|section|information|thoughts|opinion`;
+
 /** 관사/소유격 자리 (뒤에 공백까지 포함해서 캡처된다) */
 const DET = String.raw`(?:the|a|an|my|his|her|their|our|your)\s+`;
 
@@ -106,8 +112,12 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
     id: 'en-prep-year-in',
     language: 'en',
     severity: 'minor',
-    pattern: new RegExp(String.raw`\bon\s+((?:19|20)\d{2})\b(?![-/])` + PHRASE_END, 'i'),
-    replace: 'in $1',
+    pattern: new RegExp(
+      String.raw`\b(?:(${ON_TOPIC_NOUNS})\s+)?on\s+((?:19|20)\d{2})\b(?![-/])` + PHRASE_END,
+      'i',
+    ),
+    // "a book on 2019" 처럼 "~에 관한"의 on이면 건드리지 않는다
+    replace: (m) => (m[1] ? null : `in ${m[2]}`),
     explanationKo: '연도나 달처럼 긴 기간 앞에는 in을 써요. in 2026, in May처럼요.',
     reasonKo: '연도 앞 전치사 in',
     skipIf: ON_VERB_GUARD,
@@ -131,7 +141,13 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
       const part = m[1];
       if (!part) return null;
       const lower = part.toLowerCase();
-      return lower === 'night' ? 'at night' : `in the ${lower}`;
+      const suggestion = lower === 'night' ? 'at night' : `in the ${lower}`;
+      // 이미 맞는 표현(At night / at night)은 대소문자만 달라도 교정으로 보고하지 않는다
+      if (m[0].toLowerCase() === suggestion) return null;
+      // 문장 첫머리의 대문자는 그대로 살린다 (At morning → In the morning)
+      return /^[A-Z]/.test(m[0])
+        ? `${suggestion.charAt(0).toUpperCase()}${suggestion.slice(1)}`
+        : suggestion;
     },
     explanationKo: '아침·오후·저녁은 in the morning처럼 쓰고, 밤만 at night이라고 해요.',
     reasonKo: '하루의 때를 나타내는 전치사',
@@ -221,6 +237,9 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
     },
     explanationKo: 'go, come 뒤에 장소가 오면 to를 넣어 주세요. go to school처럼요.',
     reasonKo: '장소 앞 to 추가',
+    // "go park my car"처럼 go + 동사원형으로 이어지는 건 장소가 아니다
+    skipIf:
+      /\b(?:go|goes|going|come|comes|coming|went|came)\s+(?:park|camp|work|store|bank|beach|market)\s+(?:it|them|him|her|us|me|my|your|our|their|his|its)\b/i,
     keyExpression: {
       expression: 'go to work',
       meaningKo: '출근하다, 회사에 가다',
@@ -244,7 +263,6 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
       const lower = place.toLowerCase();
       if (lower === 'home' && !det) return `${verb} home`;
       if (ARRIVE_IN_PLACES.has(lower)) return `${verb} in ${det}${place}`;
-      if (!det && /^[A-Z]/.test(place)) return `${verb} in ${place}`;
       if (ARRIVE_AT_PLACES.has(lower)) return `${verb} at ${det}${place}`;
       return null;
     },
@@ -302,10 +320,14 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'major',
     pattern: new RegExp(
-      String.raw`\b(wait|waits|waited|waiting)\s+((?:the|a|my|his|her|their|our|your)\s+)?(bus|train|subway|taxi|friend|friends|him|her|them|me|us|answer|reply|response|order|food|elevator|results?)\b`,
+      String.raw`\b((?:the|a|an|my|his|her|their|our|your|this|that)\s+)?(wait|waits|waited|waiting)\s+((?:the|a|my|his|her|their|our|your)\s+)?(bus|train|subway|taxi|friend|friends|him|her|them|me|us|answer|reply|response|order|food|elevator|results?)\b`,
       'i',
     ),
-    replace: '$1 for $2$3',
+    replace: (m) => {
+      // "the waiting train"처럼 관사 뒤에 오는 wait/waiting은 동사가 아니라 명사·형용사다
+      if (m[1]) return null;
+      return `${m[2]} for ${m[3] ?? ''}${m[4]}`;
+    },
     explanationKo: '누군가나 무언가를 기다릴 때는 wait for를 써요.',
     reasonKo: 'wait 뒤 for 추가',
     keyExpression: {
@@ -338,13 +360,17 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'minor',
     pattern: new RegExp(
-      String.raw`\b(meet|meets|met|meeting)\s+with\s+(him|her|them|me|us|my\s+(?:friend|friends|family|mom|mother|dad|father|sister|brother|parents|boyfriend|girlfriend|husband|wife|cousin|grandma|grandmother|grandpa|grandfather|classmate|classmates))\b`,
+      String.raw`\b((?:am|is|are|was|were|be|been|being|(?:i|you|we|they|he|she|it)['’](?:m|re|s))\s+)?(meet|meets|met|meeting)\s+with\s+(him|her|them|me|us|my\s+(?:friend|friends|family|mom|mother|dad|father|sister|brother|parents|boyfriend|girlfriend|husband|wife|cousin|grandma|grandmother|grandpa|grandfather|classmate|classmates))\b`,
       'i',
     ),
-    replace: '$1 $2',
+    replace: (m) => {
+      // meeting은 be동사 뒤(진행형)일 때만 동사다. "a long meeting with them"의 meeting은
+      // 회의라는 명사라서 with를 지우면 문장이 깨진다.
+      if (!m[1] && /^meeting$/i.test(m[2])) return null;
+      return `${m[1] ?? ''}${m[2]} ${m[3]}`;
+    },
     explanationKo: '친구나 가족을 만날 때는 with 없이 meet my friend처럼 바로 쓰면 자연스러워요.',
     reasonKo: 'meet 뒤 with 삭제',
-    skipIf: /\b(?:a|an|the|my|our|your|their|his|her|this|that|one|another|first|last|next|team|zoom)\s+meeting\b/i,
     keyExpression: {
       expression: 'meet my friend',
       meaningKo: '친구를 만나다',
@@ -357,7 +383,10 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
     id: 'en-prep-married-to',
     language: 'en',
     severity: 'minor',
-    pattern: /\bmarried\s+with\s+(him|her|me|us|them|you|my|his|their|our|your)\b/i,
+    pattern: new RegExp(
+      String.raw`\bmarried\s+with\s+(him|her|me|us|them|you|(?:my|his|her|their|our|your)\s+(?:boyfriend|girlfriend|husband|wife|partner|fiance|fiancee|friend|classmate|coworker|colleague|neighbor|neighbour|cousin|senior|junior|ex))\b`,
+      'i',
+    ),
     replace: 'married to $1',
     explanationKo: '누구와 결혼했다고 할 때는 be married to를 써요.',
     reasonKo: 'married 뒤 전치사 to',
@@ -374,11 +403,12 @@ export const EN_PREPOSITION_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'minor',
     pattern: new RegExp(
-      String.raw`\b(good|bad|great|terrible|better|best|poor|weak)\s+in\s+(english|japanese|korean|chinese|spanish|math|maths|science|history|music|art|sports|cooking|singing|dancing|drawing|swimming|writing|speaking|reading|listening|running|studying|driving|baking|painting|languages|games|golf|tennis|soccer|basketball)\b` +
+      String.raw`\b(the\s+)?(good|bad|great|terrible|better|best|poor|weak)\s+in\s+(english|japanese|korean|chinese|spanish|math|maths|science|history|music|art|sports|cooking|singing|dancing|drawing|swimming|writing|speaking|reading|listening|running|studying|driving|baking|painting|languages|games|golf|tennis|soccer|basketball)\b` +
         PHRASE_END,
       'i',
     ),
-    replace: '$1 at $2',
+    // "the best in history"의 in은 "~중에서"라는 뜻이라 맞는 표현이다
+    replace: (m) => (m[1] ? null : `${m[2]} at ${m[3]}`),
     explanationKo: '어떤 일을 잘하거나 못한다고 할 때는 at을 써요. good at English처럼요.',
     reasonKo: 'good/bad 뒤 전치사 at',
     keyExpression: {

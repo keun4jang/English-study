@@ -32,6 +32,29 @@ function toGerund(verb: string): string {
   return `${lower}ing`;
 }
 
+/**
+ * 매치 바로 앞 단어. 규칙이 문맥을 볼 수 있게 한다.
+ * (Hermes에 lookbehind가 없어서 match.index/match.input으로 직접 본다)
+ */
+function wordBefore(match: RegExpMatchArray): string {
+  const input = match.input ?? '';
+  const index = match.index ?? 0;
+  const preceding = input.slice(0, index).trimEnd();
+  const found = preceding.match(/([A-Za-z']+)$/);
+  return found ? found[1].toLowerCase() : '';
+}
+
+/**
+ * needed / planned / wanted 같은 말은 동사일 수도, 명사를 꾸미는 형용사일 수도 있다.
+ * ("a very needed change" — 여기서 needed는 동사가 아니다)
+ * 앞에 관사나 정도 부사가 오면 형용사로 보고 to를 넣지 않는다.
+ */
+const ADJECTIVE_MARKERS = new Set([
+  'a', 'an', 'the', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'this', 'that',
+  'these', 'those', 'very', 'really', 'so', 'quite', 'most', 'much', 'badly', 'highly',
+  'urgently', 'well', 'long', 'newly', 'widely', 'deeply', 'greatly',
+]);
+
 export const EN_COMMON_RULES: CorrectionRule[] = [
   {
     id: 'en-common-want-to-infinitive',
@@ -42,7 +65,11 @@ export const EN_COMMON_RULES: CorrectionRule[] = [
       String.raw`\b(want|wants|wanted|need|needs|needed|decide|decides|decided|plan|plans|planned|hope|hopes|hoped|promise|promises|promised|agree|agrees|agreed|learn|learns|learned|wish|wishes|wished|expect|expects|expected|forget|forgets|forgot|refuse|refuses|refused)\s+(${VERB_ALT})\b`,
       'i',
     ),
-    replace: (m) => `${m[1]} to ${m[2]}`,
+    replace: (m) => {
+      // "A very needed change came." 처럼 형용사로 쓰인 자리는 건드리지 않는다
+      if (ADJECTIVE_MARKERS.has(wordBefore(m))) return null;
+      return `${m[1]} to ${m[2]}`;
+    },
     explanationKo: 'want, need, decide 같은 동사 뒤에는 to가 필요해요. "I want to go home"처럼요.',
     reasonKo: 'to부정사 빠짐',
     keyExpression: {

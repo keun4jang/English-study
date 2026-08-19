@@ -12,6 +12,23 @@ import { CorrectionRule } from './types';
 
 const alt = (words: readonly string[]): string => words.join('|');
 
+/**
+ * 매치 바로 앞 단어 (사이에 공백만 있을 때). 문장부호가 끼어 있으면 빈 문자열.
+ * 뒤돌아보기(lookbehind) 없이 앞 문맥을 확인해 오탐을 거르는 데 쓴다.
+ */
+const wordBefore = (match: RegExpMatchArray): string => {
+  const input = match.input ?? '';
+  const head = input.slice(0, match.index ?? 0);
+  return (/([A-Za-z]+(?:['’][A-Za-z]+)?)\s*$/.exec(head)?.[1] ?? '').toLowerCase();
+};
+
+/** 매치 바로 뒤 단어 (사이에 공백만 있을 때). 문장부호가 끼어 있으면 빈 문자열. */
+const wordAfter = (match: RegExpMatchArray): string => {
+  const input = match.input ?? '';
+  const tail = input.slice((match.index ?? 0) + match[0].length);
+  return (/^\s+([A-Za-z]+)/.exec(tail)?.[1] ?? '').toLowerCase();
+};
+
 /** very는 동사를 꾸미지 못한다 — 한국어 "아주 좋아해"를 직역할 때 자주 나온다. */
 const FEELING_VERBS: readonly string[] = [
   'like', 'likes', 'liked', 'love', 'loves', 'loved', 'hate', 'hates', 'hated',
@@ -22,12 +39,32 @@ const FEELING_VERBS: readonly string[] = [
   'admired', 'recommend', 'recommends', 'recommended', 'understand', 'understands',
 ];
 
-/** 이미 뜻이 강해서 very와 잘 어울리지 않는 형용사 (very tired, very hot 같은 정상 조합은 제외했다) */
+/**
+ * "very + 동사" 규칙에서 앞 단어가 이것들이면 뒤는 동사가 아니라 형용사로 쓰인 과거분사다.
+ * "He is a very respected doctor" / "Your help is very appreciated"처럼 이미 맞는 문장을
+ * 건드리지 않기 위한 안전장치.
+ */
+const NOT_SUBJECT_BEFORE_VERY: ReadonlySet<string> = new Set([
+  // be동사·연결동사 뒤 → 수동/형용사 자리
+  'is', 'are', 'am', 'was', 'were', 'be', 'been', 'being',
+  'get', 'gets', 'got', 'gotten', 'feel', 'feels', 'felt', 'seem', 'seems', 'seemed',
+  'look', 'looks', 'looked', 'sound', 'sounds', 'sounded',
+  'become', 'becomes', 'became', 'stay', 'stays', 'stayed', 'remain', 'remains',
+  // 관사·소유격·지시어 뒤 → 명사를 꾸미는 자리
+  'a', 'an', 'the', 'my', 'your', 'his', 'her', 'our', 'their', 'its',
+  'this', 'that', 'these', 'those', 'some', 'any', 'no', 'every', 'another',
+]);
+
+/**
+ * 이미 뜻이 강해서 very와 잘 어울리지 않는 형용사.
+ * very tired, very hot처럼 정상인 조합은 물론, very fun / very tiny처럼 원어민도 흔히 쓰는
+ * 조합(= 고치면 오탐)도 목록에서 뺐다.
+ */
 const STRONG_ADJECTIVES: readonly string[] = [
-  'delicious', 'amazing', 'awesome', 'perfect', 'huge', 'enormous', 'tiny',
+  'delicious', 'amazing', 'awesome', 'perfect', 'huge', 'enormous',
   'freezing', 'boiling', 'exhausted', 'starving', 'terrible', 'awful', 'horrible',
   'fantastic', 'wonderful', 'excellent', 'gorgeous', 'furious', 'hilarious',
-  'brilliant', 'stunning', 'ridiculous', 'impossible', 'ancient', 'delighted', 'fun',
+  'brilliant', 'stunning', 'impossible',
 ];
 
 /** too much 뒤에 잘못 붙는 긍정 형용사 — 실제 뜻은 "정말 ~한"에 가깝다. */
@@ -53,8 +90,32 @@ const ING_TO_ED: Record<string, string> = {
   annoying: 'annoyed',
 };
 
-/** 기분 형용사 뒤에 올 수 있는 말 — 목적어가 오는 진행형("I'm annoying my brother")을 걸러 준다. */
-const FEELING_TAIL = String.raw`(?=\s*(?:[,.!?;:]|$)|\s+(?:because|since|but|and|so|then|today|yesterday|tonight|now|lately|these|all|about|at|in|on|during|after|before|when|while|right|too|though|already)\b)`;
+/**
+ * 기분 형용사 뒤에 올 수 있는 말 — 목적어가 오는 진행형("I'm annoying my brother")을 걸러 준다.
+ * 마지막 갈래(전치사)는 캡처해 두고, 단어별로 어울리는 전치사인지 다시 확인한다.
+ * "I'm boring at parties"(내가 재미없는 사람이라는 뜻, 정상)까지 고쳐 버리지 않기 위해서다.
+ */
+const FEELING_TAIL = String.raw`(?=\s*(?:[,.!?;:]|$)|\s+(?:because|since|but|and|so|then|today|yesterday|tonight|now|lately|these|all|during|after|before|when|while|right|too|though|already)\b|\s+(about|at|in|on|by|with)\b)`;
+
+/**
+ * -ed 형태가 자연스럽게 취하는 전치사만 허용한다 (interested in, excited about …).
+ * 목록이 비어 있으면 전치사가 따라올 때는 아예 손대지 않는다.
+ */
+const FEELING_PREPOSITIONS: Record<string, readonly string[]> = {
+  interesting: ['in', 'about'],
+  exciting: ['about'],
+  confusing: ['about', 'by'],
+  disappointing: ['about', 'with', 'in', 'by'],
+  embarrassing: ['about', 'by'],
+  frustrating: ['about', 'with', 'by'],
+  satisfying: ['with', 'by'],
+  annoying: ['about', 'with', 'by'],
+  surprising: ['about', 'at', 'by'],
+  depressing: ['about'],
+  // "I'm boring in class" / "I'm tiring at work"는 -ing 뜻으로도 읽히므로 건드리지 않는다.
+  boring: [],
+  tiring: [],
+};
 
 /** 마시는 것 — "eat coffee"는 한국어 "커피를 먹다"의 직역이다. */
 const DRINKS: readonly string[] = [
@@ -76,6 +137,14 @@ const TAKE_VERB: Record<string, string> = {
   eating: 'taking',
 };
 
+/** shopping 뒤에 오면 "쇼핑하다"가 아니라 명사를 꾸미는 말이다 (shopping mall …) */
+const SHOPPING_COMPOUND_NOUNS: ReadonlySet<string> = new Set([
+  'mall', 'malls', 'center', 'centers', 'centre', 'centres', 'cart', 'carts',
+  'bag', 'bags', 'basket', 'baskets', 'list', 'lists', 'spree', 'sprees',
+  'app', 'apps', 'site', 'sites', 'website', 'websites', 'street', 'streets',
+  'district', 'districts', 'season', 'seasons', 'habit', 'habits', 'addiction',
+]);
+
 const GO_VERB: Record<string, string> = {
   did: 'went',
   do: 'go',
@@ -86,15 +155,23 @@ const GO_VERB: Record<string, string> = {
 /** 몸 상태를 말할 때 자주 나오는 직역 표현의 형용사 */
 const CONDITION_NEGATIVE: readonly string[] = ['bad', 'not good', 'terrible', 'awful'];
 
-/** 즐거운 일에는 funny보다 fun이 어울리는 명사들 */
+/**
+ * 즐거운 일에는 funny보다 fun이 어울리는 명사들.
+ * date는 "만남"과 "날짜" 둘 다여서, 또 실제로 웃긴 데이트도 있어서 뺐다.
+ */
 const FUN_NOUNS: readonly string[] = [
   'trip', 'travel', 'vacation', 'holiday', 'weekend', 'camping', 'picnic',
-  'hiking', 'festival', 'party', 'date',
+  'hiking', 'festival', 'party',
 ];
 
 /** 맛 표현이 겹칠 때 하나만 남긴다 */
 const TASTE_WORDS: readonly string[] = ['delicious', 'tasty', 'yummy', 'good', 'nice', 'great'];
 const TASTE_CORE = new Set(['delicious', 'tasty', 'yummy']);
+
+/** 이 말 뒤의 hand는 "손"이 아니라 앞말과 한 덩어리다 (second hand phone = 중고폰) */
+const HAND_MODIFIERS: ReadonlySet<string> = new Set([
+  'second', '2nd', 'used', 'left', 'right', 'minute', 'hour', 'other', 'free', 'first',
+]);
 
 /** 한국에서 만들어진 영어 표현 → 영어권 표현 */
 const KONGLISH: Record<string, string> = {
@@ -127,8 +204,19 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'minor',
     // "I very like coffee." → "I really like coffee."
+    // 앞에 주어가 있을 때만 동사로 본다. "is very appreciated", "a very respected doctor"처럼
+    // 과거분사가 형용사로 쓰인 정상 문장은 건너뛴다.
     pattern: new RegExp(String.raw`\bvery\s+(${alt(FEELING_VERBS)})\b`, 'i'),
-    replace: 'really $1',
+    replace: (match) => {
+      const verb = match[1] ?? '';
+      const before = wordBefore(match);
+      if (!verb) return null;
+      // 문장 첫머리("Very appreciated!")나 be동사·관사 뒤면 동사 자리가 아니다.
+      if (!before || NOT_SUBJECT_BEFORE_VERY.has(before)) return null;
+      // "It's very appreciated", "They're very missed" 같은 축약형 뒤도 마찬가지다.
+      if (/['’](s|re|m|ve|d|ll)$/.test(before)) return null;
+      return `really ${verb}`;
+    },
     explanationKo: 'like나 love 같은 동사 앞에는 very 대신 really를 쓰면 훨씬 자연스러워요.',
     reasonKo: '동사 앞에는 really',
     keyExpression: {
@@ -157,8 +245,16 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'minor',
     // "It was too much good." → "It was really good."
-    pattern: new RegExp(String.raw`\btoo\s+much\s+(${alt(POSITIVE_ADJECTIVES)})\b`, 'i'),
-    replace: 'really $1',
+    // be동사 뒤이면서 형용사에서 절이 끝날 때만 고친다. "I ate too much good food"처럼
+    // too much가 뒤의 명사를 꾸미는 정상 문장을 건드리지 않기 위해서다.
+    pattern: new RegExp(
+      String.raw`\b(was|is|were|are|am|be|been|felt|feels?|looks?|looked|tastes?|tasted|seems?|seemed|['’]s|['’]m|['’]re)\s+too\s+much\s+(${alt(
+        POSITIVE_ADJECTIVES,
+      )})\b` +
+        String.raw`(?=\s*(?:[,.!?;:]|$)|\s+(?:but|and|so|because|though|today|yesterday|tonight)\b)`,
+      'i',
+    ),
+    replace: '$1 really $2',
     explanationKo: '"너무 좋았어요"처럼 좋은 뜻일 때는 too much보다 really가 잘 어울려요.',
     reasonKo: 'too much + 형용사 → really',
     keyExpression: {
@@ -205,7 +301,8 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'minor',
     // "I ate lunch and then and then took a walk." → "… and then took a walk."
-    pattern: /\b(and\s+then|and|but|so|then|because)\s+\1\b/i,
+    // so는 뺐다 — "I was so so tired"는 강조 반복(정상)이라 줄이면 뜻이 옅어진다.
+    pattern: /\b(and\s+then|and|but|then|because)\s+\1\b/i,
     replace: '$1',
     explanationKo: '같은 연결어가 두 번 이어졌어요. 한 번만 써도 문장이 매끄럽게 이어져요.',
     reasonKo: '중복된 연결어 정리',
@@ -227,6 +324,11 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
       const verb = (match[1] ?? '').toLowerCase();
       const fixed = GO_VERB[verb];
       if (!fixed) return null;
+      // "Did shopping malls exist?"처럼 shopping이 뒤 명사를 꾸미는 경우는 동사구가 아니다.
+      if (SHOPPING_COMPOUND_NOUNS.has(wordAfter(match))) return null;
+      // "Did shopping become popular?" — 문장 첫머리의 의문문 did는 조동사다.
+      const isQuestion = /\?\s*$/.test(match.input ?? '');
+      if (!wordBefore(match) && isQuestion && verb !== 'doing') return null;
       return `${fixed} shopping`;
     },
     explanationKo: '쇼핑은 go shopping으로 말하면 자연스러워요.',
@@ -244,8 +346,11 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
     // "I ate a coffee in the morning." → "I had a coffee in the morning."
     pattern: new RegExp(
       String.raw`\b(ate|eat|eats|eating)\s+((?:a|an|the|some|my|one)\s+)?(${alt(DRINKS)})\b` +
-        // "coffee beans", "milk bread"처럼 뒤에 명사가 더 붙으면 음식일 수 있으므로 건드리지 않는다.
-        String.raw`(?!\s+(?:beans?|cake|cakes|candy|candies|ice|powder|jelly|chocolate|bread|cookie|cookies|donut|donuts|shop|shops|machine|flavored?))`,
+        // "coffee beans", "milk bread", "water melon"처럼 뒤에 명사가 더 붙으면
+        // 마시는 것이 아니라 먹는 것이므로 건드리지 않는다.
+        String.raw`(?!\s+(?:beans?|cake|cakes|candy|candies|ice|powder|jelly|chocolate|bread|cookie|cookies|donut|donuts|shop|shops|machine|flavored?` +
+        String.raw`|melons?|buns?|gums?|bottles?|parks?|leaf|leaves|pudding|puddings|pie|pies|tart|tarts` +
+        String.raw`|jam|sauce|soup|rolls?|toast|biscuits?|pancakes?|muffins?|sandwich|sandwiches|steak|stew|salad|noodles?))`,
       'i',
     ),
     replace: (match) => {
@@ -342,8 +447,11 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
       const be = match[2] ?? '';
       const degree = match[3] ?? '';
       const adjective = (match[4] ?? '').toLowerCase();
+      const preposition = (match[5] ?? '').toLowerCase();
       const fixed = ING_TO_ED[adjective];
       if (!subject || !be || !fixed) return null;
+      // 뒤에 전치사가 오면 -ed 형태와 어울리는 짝일 때만 고친다 (interested in ✓ / boring at ✗)
+      if (preposition && !(FEELING_PREPOSITIONS[adjective] ?? []).includes(preposition)) return null;
       return `${subject}${be} ${degree}${fixed}`;
     },
     explanationKo: '내 기분은 -ed로, 그 대상이 어떤지는 -ing로 말해요. I\'m bored는 내가 심심한 것, It\'s boring은 그것이 지루한 거예요.',
@@ -364,6 +472,8 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
       'i',
     ),
     replace: '$1 $2 $3fun',
+    // 농담·웃음 이야기가 함께 나오면 정말 "웃겼다"는 뜻이므로 그대로 둔다.
+    skipIf: /\b(joke|jokes|joking|laugh|laughs|laughed|laughing|comedian|comedy|humor|humour|pun|puns|hilarious)\b/i,
     explanationKo: 'funny는 웃긴 것, fun은 즐거운 것을 뜻해요. 여행이나 파티에는 fun이 잘 어울려요.',
     reasonKo: 'funny → fun (즐거움)',
     keyExpression: {
@@ -421,6 +531,8 @@ export const EN_NATURAL_RULES: CorrectionRule[] = [
       const key = (match[1] ?? '').toLowerCase().replace(/\s+/g, '');
       const fixed = KONGLISH[key];
       if (!fixed) return null;
+      // "second hand phone"(중고폰), "minute hand"처럼 hand가 앞말과 붙는 경우는 다른 뜻이다.
+      if (key === 'handphone' && HAND_MODIFIERS.has(wordBefore(match))) return null;
       return fixed;
     },
     explanationKo: '한국에서 쓰는 영어 표현 중에는 영어권에서 다르게 말하는 것들이 있어요.',

@@ -69,6 +69,53 @@ const CORRECT_EN = [
   'I decided to take a walk after dinner.',
   'Today was a quiet day.',
   'Nothing special happened, but I felt calm.',
+  // 자연스러움 규칙이 넘보기 쉬운 정상 표현
+  'He is a very respected doctor in our town.',
+  'Your help is very appreciated.',
+  'She is a very loved teacher.',
+  'It is very likely to rain.',
+  'It was a very tiny apartment, but I liked it.',
+  'That was a very fun evening.',
+  'I ate too much good food at the party.',
+  'I drank too much sweet tea last night.',
+  'I was so so tired after the flight.',
+  'Did shopping malls exist back then?',
+  'I ate a milk bun for breakfast.',
+  'I ate a water melon slice.',
+  'I am boring at parties, honestly.',
+  'The party was funny because he told jokes.',
+  'The second hand phone was cheap.',
+  // 시간 표현이 주어인 문장 — 주어가 빠진 것이 아니다
+  'Yesterday went by so fast.',
+  'Today felt like a long day.',
+  'This morning went well.',
+  'Last weekend went by too quickly.',
+  // 등위 접속된 주어 — 대명사만 보고 수를 판단하면 안 된다
+  'My friend and I are going to the movies.',
+  'You and she are both right.',
+  'My sister and he go to the same school.',
+  "Mary and he don't like coffee.",
+  'Tom and she have a new car.',
+  // 부정 축약 의문문
+  "Isn't it beautiful?",
+  "Aren't you tired?",
+  "Wasn't it fun?",
+  // 목적격 보어 (동사 + it/you + 형용사·동사원형)
+  'I drink it cold.',
+  'We serve it hot.',
+  'Cut it short.',
+  'I ordered it spicy.',
+  'I need it ready by five.',
+  'I noticed it move a little.',
+  // 그 밖의 경계 사례
+  'It is better that he go home now.',
+  // needed/planned/wanted가 동사가 아니라 형용사로 쓰인 자리
+  'A very needed change came at last.',
+  'The planned trip was canceled.',
+  'It was a much needed break.',
+  'She is a well known writer.',
+  'There is 1 message for you.',
+  'Quiet, please.',
 ];
 
 const CORRECT_JA = [
@@ -80,6 +127,19 @@ const CORRECT_JA = [
   '日本語の勉強を続けています。',
   '昨日は早く寝ました。',
   'コーヒーを飲みながら本を読みました。',
+  // 조사 규칙 오탐 방어 — を가 정상인 표현
+  '犯人が飛行機を乗っ取りました。',
+  '家と学校を行ったり来たりしています。',
+  '私は英語を上手く話せません。',
+  '彼女を好きだと言えませんでした。',
+  '権力をほしいままにする人がいます。',
+  '荷物を車に乗っけました。',
+  // 시제 규칙 오탐 방어 — 앞 문장이 과거라고 뒤 문장까지 과거는 아니다
+  '昨日は雨でした。私は学生です。',
+  '先日、新しい本を買いました。この本はとても面白いです。',
+  '昨日は友達と会いました。彼はとても親切です。',
+  '先月は暇でした。仕事は大変です。',
+  'この前、京都に行きました。写真はこれです。',
 ];
 
 describe('오탐 방지 — 맞는 영어 문장은 그대로 둔다', () => {

@@ -71,8 +71,24 @@ const PAST_TIME_MARKER =
 const NON_PAST_CONTEXT =
   /今|明日|あした|あす|本日|毎日|毎朝|毎晩|毎週|毎月|毎年|いつも|来週|来月|来年|予定|つもり|でしょう|ましょう|ください|かもしれ|と思|ようです|そうです|ています|ている|ありがとう|お願い|すみません|ので|から|けど|けれど|のに|ため|たら|なら|でも|が、|し、|て、/;
 
+/** 문장 경계 — 앞 문장의 시간 표현이 뒤 문장으로 번지지 않게 자른다. */
+const SENTENCE_BREAK = /[。！？.!?\n]/g;
+
+/**
+ * 과거 시간 표현이 **매치와 같은 문장 안에서, 매치보다 앞에** 있는지.
+ *
+ * 문장 전체를 보면 「昨日は雨でした。私は学生です。」의 学生です까지 과거로 바꿔버린다.
+ * (앞 문장이 과거라고 뒤 문장까지 과거인 건 아니다.)
+ */
 function hasPastTimeMarker(match: RegExpMatchArray): boolean {
-  return PAST_TIME_MARKER.test(match.input ?? '');
+  const input = match.input ?? '';
+  const head = input.slice(0, (match.index ?? 0) + (match[0] ?? '').length);
+  let start = 0;
+  SENTENCE_BREAK.lastIndex = 0;
+  for (let m = SENTENCE_BREAK.exec(head); m; m = SENTENCE_BREAK.exec(head)) {
+    start = m.index + m[0].length;
+  }
+  return PAST_TIME_MARKER.test(head.slice(start));
 }
 
 function textBefore(match: RegExpMatchArray): string {
@@ -179,7 +195,8 @@ export const JA_RULES: CorrectionRule[] = [
     language: 'ja',
     severity: 'major',
     // 「電車を乗り換える」처럼 を를 쓰는 복합동사는 어미가 달라 걸리지 않는다.
-    pattern: /を(乗りま|乗りた|乗る|乗っ|乗ろ)/,
+    // 「飛行機を乗っ取る」「荷物を乗っける」는 を가 정상이라 乗っ 뒤를 확인한다.
+    pattern: /を(乗りま|乗りた|乗る|乗っ(?![取け])|乗ろ)/,
     replace: 'に$1',
     explanationKo: '탈것에는 「〜に乗る」를 써요. バスに乗る, 電車に乗る처럼요.',
     reasonKo: 'を → に (乗る)',
@@ -195,7 +212,8 @@ export const JA_RULES: CorrectionRule[] = [
     id: 'ja-particle-wo-ni-iku',
     language: 'ja',
     severity: 'major',
-    pattern: new RegExp(`(${DESTINATIONS})を(行きま|行きた|行く|行っ|行こ)`),
+    // 「家と学校を行ったり来たりする」의 を는 정상이라 行っ 뒤에 たり가 오면 넘긴다.
+    pattern: new RegExp(`(${DESTINATIONS})を(行きま|行きた|行く|行っ(?!たり)|行こ)`),
     replace: '$1に$2',
     explanationKo: '가는 곳에는 「〜に行く」를 써요. 「〜へ行く」도 좋아요.',
     reasonKo: 'を → に (行く)',
@@ -229,9 +247,14 @@ export const JA_RULES: CorrectionRule[] = [
     id: 'ja-particle-wo-ga-suki',
     language: 'ja',
     severity: 'major',
-    // 「上手に話す」「得意とする」「できるだけ」 같은 정상 표현은 lookahead로 제외한다.
+    // 정상 표현은 lookahead로 제외한다.
+    // 「日本語を上手に話す」「得意とする」 → に・と
+    // 「英語を上手く話せない」 → く (上手く는 부사라 を가 목적어로 정상)
+    // 「彼女を好きだと言う」 → だと (인용절에서는 を도 자연스럽다)
+    // 「権力をほしいままにする」 → ほしいまま (관용구)
+    // 「できるだけ」「できる限り」 → だけ・限
     pattern:
-      /を((?:大好き|大嫌い|好き|嫌い|上手|下手|得意|苦手)(?![にと])|欲しい|ほしい|(?:でき|出来)(?:る|ます|ました|ません)(?!だけ))/,
+      /を((?:大好き|大嫌い|好き|嫌い|上手|下手|得意|苦手)(?![にとく]|だと)|(?:欲しい|ほしい)(?!まま)|(?:でき|出来)(?:る|ます|ました|ません)(?!だけ|限))/,
     replace: 'が$1',
     explanationKo: '好き・上手・欲しい・できる 앞에는 が를 써요. 한국어의 "를"과 달라요.',
     reasonKo: 'を → が (好き・上手・できる)',

@@ -34,7 +34,7 @@ const PAST_MARKER =
  * 일부러 원형을 쓰는 정상 문장을 지키기 위해 3인칭 -s 규칙을 건너뛴다.
  */
 const SUBJUNCTIVE_CONTEXT =
-  /\b(important|necessary|essential|crucial|vital|suggest(?:s|ed)?|recommend(?:s|ed)?|insist(?:s|ed)?|demand(?:s|ed)?|propose[sd]?|request(?:s|ed)?)\b[\s\S]*\bthat\b/i;
+  /\b(important|necessary|essential|crucial|vital|better|best|advisable|imperative|suggest(?:s|ed)?|recommend(?:s|ed)?|insist(?:s|ed)?|demand(?:s|ed)?|propose[sd]?|request(?:s|ed)?|urge[sd]?|advise[sd]?)\b[\s\S]*\bthat\b/i;
 
 /** 3인칭 단수 현재형 교정을 건너뛸 문맥 (과거 시점 표현 + that절 가정법) */
 const SKIP_PRESENT_S = new RegExp(
@@ -66,16 +66,58 @@ const BLOCKING_WORDS = new Set<string>([
   'like', 'likes', 'liked', 'take', 'takes', 'took',
   'play', 'plays', 'played', 'think', 'thinks', 'thought',
   'turn', 'turns', 'turned',
+  // 지각동사 보충 (I noticed it move. / I watched it change.)
+  'notice', 'notices', 'noticed', 'observe', 'observes', 'observed',
+  'spot', 'spots', 'spotted', 'witness', 'witnesses', 'witnessed',
+  'imagine', 'imagines', 'imagined',
+  // 부정 축약 의문문 (Isn't it beautiful? / Aren't you tired? / Wasn't it fun?)
+  "isn't", "aren't", "wasn't", "weren't", "ain't",
   // that절 가정법 (It is important that he go ...)
   'suggest', 'suggests', 'suggested', 'insist', 'insists', 'insisted',
   'recommend', 'recommends', 'recommended', 'demand', 'demands', 'demanded',
   'require', 'requires', 'required', 'request', 'requests', 'requested',
+  // 등위 접속된 주어 (My friend and I are ... / Tom and she have ...)
+  // 앞에 다른 주어가 붙어 복수가 되므로 대명사만 보고 수를 판단하면 안 된다.
+  'and', 'or', 'nor', 'neither', 'either', 'both', 'plus',
 ]);
 
 /** 대명사 앞 단어가 규칙을 막아야 하는 단어인지 */
 function blocked(word: string): boolean {
   if (!word) return false;
   return BLOCKING_WORDS.has(word.toLowerCase());
+}
+
+/**
+ * 등위 접속사. 앞에 다른 주어가 붙어 있으면("My friend and I are ~")
+ * 대명사 하나만 보고 단수/복수를 정할 수 없다.
+ */
+const COORDINATORS = new Set<string>(['and', 'or', 'nor', 'plus']);
+
+function coordinated(word: string): boolean {
+  if (!word) return false;
+  return COORDINATORS.has(word.toLowerCase());
+}
+
+/**
+ * it과 you는 주어로도 목적어로도 쓰인다.
+ * "drink it cold", "cut it short", "I noticed it move"처럼 목적격으로 쓰인 자리에
+ * be동사나 -s를 넣으면 맞는 문장이 망가진다. 목적격 보어를 취하는 동사는 열린 집합이라
+ * 금지 목록으로는 막을 수 없어서, 반대로 "확실히 주어 자리"인 경우에만 규칙을 적용한다.
+ *
+ * 앞 단어가 아예 없으면(문장 시작이거나 앞이 구두점이면) 주어 자리로 본다.
+ */
+const SUBJECT_LEAD_WORDS = new Set<string>([
+  'but', 'so', 'because', 'since', 'if', 'when', 'while', 'though', 'although',
+  'before', 'after', 'until', 'unless', 'that', 'then', 'also', 'still',
+  'today', 'tonight', 'yesterday', 'now', 'maybe', 'actually', 'anyway',
+  'however', 'sometimes', 'usually', 'often', 'always', 'luckily',
+  'unfortunately', 'honestly', 'first', 'finally',
+]);
+
+/** 대명사가 확실히 주어 자리인지 (앞 단어 기준) */
+function subjectPosition(lead: string): boolean {
+  if (!lead) return true;
+  return SUBJECT_LEAD_WORDS.has(lead.toLowerCase());
 }
 
 /** 대명사 바로 앞 단어를 선택적으로 잡아두는 조각 (오탐 방지용) */
@@ -212,17 +254,29 @@ const BE_ADJECTIVES: readonly string[] = [
   'dirty', 'loud', 'heavy',
 ];
 
-/** 주어 없이 문장이 시작될 때 뒤에 이어질 수 있는 말 (오탐 방지용 확인) */
-const SELF_TAIL = String.raw`(?=[.,!?;]|\s+(?:today|tonight|now|right\s+now|again|all\s+day|lately|these\s+days|and|but|so|because|since|after|from|of|though|too|as\s+well|already)\b|$)`;
+/**
+ * 명령문·감탄사 뒤에 쉼표가 오는 경우를 막는다.
+ * "Quiet, please." / "Ready, set, go!"는 주어가 빠진 문장이 아니라 그 자체로 맞는 말이다.
+ */
+const TAIL_GUARD = String.raw`(?!\s*,\s*(?:please|set|sir|ma'am|everyone|guys|okay|ok)\b)`;
 
-const WEATHER_TAIL = String.raw`(?=[.,!?;]|\s+(?:today|tonight|outside|here|again|all\s+day|a\s+lot|hard|this\s+(?:morning|afternoon|evening)|in\s+the\s+(?:morning|afternoon|evening)|at\s+night|these\s+days|lately|and|but|so|though|because|since)\b|$)`;
+/** 주어 없이 문장이 시작될 때 뒤에 이어질 수 있는 말 (오탐 방지용 확인) */
+const SELF_TAIL = String.raw`${TAIL_GUARD}(?=[.,!?;]|\s+(?:today|tonight|now|right\s+now|again|all\s+day|lately|these\s+days|and|but|so|because|since|after|from|of|though|too|as\s+well|already)\b|$)`;
+
+const WEATHER_TAIL = String.raw`${TAIL_GUARD}(?=[.,!?;]|\s+(?:today|tonight|outside|here|again|all\s+day|a\s+lot|hard|this\s+(?:morning|afternoon|evening)|in\s+the\s+(?:morning|afternoon|evening)|at\s+night|these\s+days|lately|and|but|so|though|because|since)\b|$)`;
 
 /** 이미 주어가 있으면 주어를 새로 붙이지 않는다 */
 const HAS_SUBJECT =
   /\b(i|we|you|they|he|she|it|there|this|that|these|those|my|our|your|his|her|their)\b/i;
 
-/** 문장 앞에 올 수 있는 시간 표현 (주어 보충 규칙에서 그대로 살려둔다) */
-const LEADING_TIME = String.raw`(?:(?:yesterday|today|tonight|this\s+morning|this\s+afternoon|this\s+evening|last\s+night|last\s+weekend|last\s+week|after\s+work|after\s+school|in\s+the\s+morning|in\s+the\s+afternoon)\s*,?\s+)?`;
+/**
+ * 문장 앞에 올 수 있는 시간 표현 (주어 보충 규칙에서 그대로 살려둔다).
+ *
+ * 쉼표를 반드시 요구한다. 쉼표가 없으면 시간 표현 자체가 주어일 수 있어서
+ * ("Yesterday went by so fast." / "Today felt like a long day.") 맞는 문장에
+ * I를 끼워 넣게 된다. 쉼표가 있으면 부사구가 확실하므로 안전하다.
+ */
+const LEADING_TIME = String.raw`(?:(?:yesterday|today|tonight|this\s+morning|this\s+afternoon|this\s+evening|last\s+night|last\s+weekend|last\s+week|after\s+work|after\s+school|in\s+the\s+morning|in\s+the\s+afternoon)\s*,\s+)?`;
 
 /** 주어 없이 문장을 시작하는 과거형 동사들 (left처럼 명사로도 읽히는 단어는 제외) */
 const PAST_STARTERS: readonly string[] = [
@@ -250,8 +304,10 @@ export const EN_AGREEMENT_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'major',
     // "Went to school." → "I went to school."
+    // 뒤에 well/by/fast 같은 말이 오면 주어가 "I"가 아니라 앞 문장의 일(It)이라
+    // 잘못 끼워 넣게 되므로 건너뛴다. ("Went well." → "I went well." 방지)
     pattern: new RegExp(
-      String.raw`^(${LEADING_TIME})(${alt(PAST_STARTERS)})\b(?!\s+(?:i|you|he|she|it|we|they)\b)(?=\s+\S)`,
+      String.raw`^(${LEADING_TIME})(${alt(PAST_STARTERS)})\b(?!\s+(?:i|you|he|she|it|we|they|well|fine|great|fast|quickly|smoothly|badly|perfectly|okay|ok|by|so\s+(?:fast|quickly|well)|too\s+(?:fast|quickly))\b)(?=\s+\S)`,
       'i',
     ),
     replace: (match) => {
@@ -356,6 +412,9 @@ export const EN_AGREEMENT_RULES: CorrectionRule[] = [
       if (!subject || !adjective) return null;
       if (blocked(lead)) return null;
       const lower = subject.toLowerCase();
+      // it/you는 목적격으로도 쓰인다: "I drink it cold." "We serve it hot." "Cut it short."
+      // 이런 목적격 보어 자리에 be동사를 넣으면 맞는 문장이 망가진다.
+      if ((lower === 'it' || lower === 'you') && !subjectPosition(lead)) return null;
       const be = lower === 'i' ? 'am' : lower === 'you' || lower === 'we' || lower === 'they' ? 'are' : 'is';
       const prefix = lead ? `${lead} ` : '';
       return `${prefix}${subject} ${be} ${degree}${adjective}`;
@@ -431,21 +490,26 @@ export const EN_AGREEMENT_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'major',
     // "They is happy." → "They are happy." / "We was tired." → "We were tired."
-    pattern: /\b(i|he|she|it|we|they|you)\s+(am|is|are|was|were)\b/i,
+    pattern: new RegExp(String.raw`${LEAD}\b(i|he|she|it|we|they|you)\s+(am|is|are|was|were)\b`, 'i'),
     replace: (match) => {
-      const subject = match[1] ?? '';
-      const be = (match[2] ?? '').toLowerCase();
+      const lead = match[1] ?? '';
+      const subject = match[2] ?? '';
+      const be = (match[3] ?? '').toLowerCase();
       if (!subject || !be) return null;
+      // "My friend and I are ~", "Tom and she are ~"처럼 등위 접속된 주어는
+      // 대명사만 보면 단수로 착각한다. 앞 단어가 and/or면 손대지 않는다.
+      if (coordinated(lead)) return null;
       const lower = subject.toLowerCase();
       const plural = lower === 'we' || lower === 'they' || lower === 'you';
+      const prefix = lead ? `${lead} ` : '';
       if (be === 'was' || be === 'were') {
         // if I were / if he were 같은 가정법은 건드리지 않는다
-        if (plural && be === 'was') return `${subject} were`;
+        if (plural && be === 'was') return `${prefix}${subject} were`;
         return null;
       }
       const expected = lower === 'i' ? 'am' : plural ? 'are' : 'is';
       if (be === expected) return null;
-      return `${subject} ${expected}`;
+      return `${prefix}${subject} ${expected}`;
     },
     explanationKo: 'be동사는 주어에 맞춰 써요. I는 am, he/she/it은 is, you/we/they는 are예요.',
     reasonKo: '주어에 맞는 be동사',
@@ -460,8 +524,9 @@ export const EN_AGREEMENT_RULES: CorrectionRule[] = [
     language: 'en',
     severity: 'major',
     // "There is many people." → "There are many people."
+    // 숫자 1은 단수라서 제외한다 ("There is 1 message."는 맞는 문장)
     pattern:
-      /\b(there)\s+(is|was)\s+((?:so\s+|too\s+)?(?:many|several|a\s+few|few|two|three|four|five|six|seven|eight|nine|ten|\d+)\b)/i,
+      /\b(there)\s+(is|was)\s+((?:so\s+|too\s+)?(?:many|several|a\s+few|few|two|three|four|five|six|seven|eight|nine|ten|(?!1\b)\d+)\b)/i,
     replace: (match) => {
       const there = match[1] ?? '';
       const be = (match[2] ?? '').toLowerCase();
@@ -560,6 +625,8 @@ export const EN_AGREEMENT_RULES: CorrectionRule[] = [
       const verb = match[3] ?? '';
       if (!subject || !verb) return null;
       if (blocked(lead)) return null;
+      // "I noticed it move."처럼 it이 목적어인 자리에는 -s를 붙이지 않는다
+      if (subject.toLowerCase() === 'it' && !subjectPosition(lead)) return null;
       const prefix = lead ? `${lead} ` : '';
       return `${prefix}${subject} ${thirdPersonForm(verb)}`;
     },
