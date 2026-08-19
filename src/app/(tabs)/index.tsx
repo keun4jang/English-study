@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GoalProgress } from '@/components/ui/GoalProgress';
 import { Screen } from '@/components/ui/Screen';
+import { InstalledNameNotice } from '@/components/ui/InstalledNameNotice';
 import { UpdateBanner } from '@/components/ui/UpdateBanner';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isBuiltInAI } from '@/ai';
@@ -184,6 +185,7 @@ export default function TodayHome() {
         </View>
 
         <UpdateBanner />
+        <InstalledNameNotice />
 
         {/* 오늘의 목표 — 부드러운 진행 표시 (미달성 죄책감 문구 없음) */}
         <GoalProgress

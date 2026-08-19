@@ -44,6 +44,8 @@ export const useAuth = create<AuthState>()(
       signOut: () => set({ user: null, method: null }),
       deleteAccount: () => set({ user: null, method: null }),
     }),
+    // 앱 이름이 Mellow Diary → D-log로 바뀌었지만 이 키는 그대로 둔다.
+    // 바꾸는 순간 이미 저장된 사용자 데이터를 못 찾아 전부 사라진다. 화면에 나오지 않는 값이다.
     { name: 'mellow-auth', storage: persistStorage },
   ),
 );
