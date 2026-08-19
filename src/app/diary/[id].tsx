@@ -11,6 +11,7 @@ import { EmotionIcon, emotionLabel } from '@/components/ui/EmotionPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Screen } from '@/components/ui/Screen';
 import { formatDateKo } from '@/lib/dates';
+import { shareDiary } from '@/lib/shareDiary';
 import { speak, stopSpeaking } from '@/speech/tts';
 import { useDiary } from '@/state/useDiary';
 import { useSettings } from '@/state/useSettings';
@@ -24,6 +25,7 @@ export default function DiaryDetail() {
   const [showOriginal, setShowOriginal] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
 
   if (!entry) {
     return (
@@ -124,6 +126,24 @@ export default function DiaryDetail() {
               label="수정"
               onPress={() => router.push({ pathname: '/diary/edit/[id]', params: { id: entry.id } })}
             />
+            <Button
+              size="compact"
+              variant="ghost"
+              icon="share-2"
+              label="일기 공유하기"
+              onPress={async () => {
+                setShareStatus(null);
+                const result = await shareDiary(entry, { includeTranslation: true });
+                if (result === 'copied') setShareStatus('공유를 지원하지 않아 내용을 복사했어요. 원하는 곳에 붙여넣어 주세요.');
+                else if (result === 'failed') setShareStatus('공유하지 못했어요. 잠시 후 다시 시도해 주세요.');
+                else setShareStatus(null);
+              }}
+            />
+            {shareStatus ? (
+              <AppText variant="bodySmall" color="secondary">
+                {shareStatus}
+              </AppText>
+            ) : null}
             {!confirmDelete ? (
               <Button
                 size="compact"
@@ -195,8 +215,8 @@ export default function DiaryDetail() {
         ) : null}
 
         <AppText variant="caption" color="secondary">
-          공개 범위: {entry.visibility === 'private' ? '나만 보기' : entry.visibility} · 친구 공유
-          기능은 곧 만나요.
+          공개 범위: {entry.visibility === 'private' ? '나만 보기' : entry.visibility} · 이 일기는 기기
+          안에만 있어요. 더보기 → 일기 공유하기를 누른 순간에만 밖으로 나갑니다 (사진 제외).
         </AppText>
       </View>
     </Screen>
