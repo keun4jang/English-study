@@ -7,6 +7,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InstalledNameNotice } from '@/components/ui/InstalledNameNotice';
 import { Screen } from '@/components/ui/Screen';
@@ -51,6 +52,9 @@ export default function TodayHome() {
 
   const conversations = useChat((s) => s.conversations);
   const chatMessages = useChat((s) => s.messages);
+  const deleteConversation = useChat((s) => s.deleteConversation);
+  const clearDraft = useDiary((s) => s.clearDraft);
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   const today = todayKey();
   const todayEntries = useMemo(() => selectEntriesByDate(entries, today), [entries, today]);
@@ -106,6 +110,9 @@ export default function TodayHome() {
         preview: draft.text || null,
         action: '이어서 쓰기',
         go: () => router.push('/write/text'),
+        discardTitle: '쓰던 일기를 지울까요?',
+        discardDescription: '작성 중이던 내용이 사라져요. 되돌릴 수 없어요.',
+        discard: () => clearDraft(),
       }
     : activeConversation
       ? {
@@ -114,6 +121,10 @@ export default function TodayHome() {
           preview: null,
           action: '이어서 이야기하기',
           go: () => router.push('/write/chat'),
+          discardTitle: '이 대화를 지울까요?',
+          discardDescription:
+            '주고받은 문장과 교정 내용이 함께 사라져요. 되돌릴 수 없어요.\n\n이 대화로 이미 만든 일기가 있다면 그 일기는 그대로 남아요.',
+          discard: () => deleteConversation(activeConversation.id),
         }
       : null;
 
@@ -142,7 +153,16 @@ export default function TodayHome() {
                 {resume.preview}
               </AppText>
             ) : null}
-            <Button size="compact" variant="secondary" label={resume.action} onPress={resume.go} />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button size="compact" variant="secondary" label={resume.action} onPress={resume.go} />
+              {/* 안 이어갈 거면 지울 수 있어야 한다. 지울 방법이 없으면 이 카드가 계속 따라다닌다 */}
+              <Button
+                size="compact"
+                variant="ghost"
+                label="지우기"
+                onPress={() => setDiscardOpen(true)}
+              />
+            </View>
           </Card>
         ) : null}
 
@@ -195,6 +215,21 @@ export default function TodayHome() {
           )}
         </View>
       </View>
+
+      {resume ? (
+        <ConfirmDialog
+          visible={discardOpen}
+          title={resume.discardTitle}
+          description={resume.discardDescription}
+          confirmLabel="지우기"
+          onConfirm={() => {
+            resume.discard();
+            setDiscardOpen(false);
+          }}
+          onCancel={() => setDiscardOpen(false)}
+        />
+      ) : null}
+
       <VersionFooter />
     </Screen>
   );

@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { router, useNavigation } from 'expo-router';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { getAIProvider, isBuiltInAI } from '@/ai';
@@ -12,6 +12,7 @@ import { SpeakPractice } from '@/components/diary/SpeakPractice';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ExitConfirmDialog } from '@/components/ui/ExitConfirmDialog';
 import { IconButton } from '@/components/ui/IconButton';
 import { InkLoading } from '@/components/ui/InkLoading';
@@ -56,6 +57,7 @@ export default function ChatScreen() {
   /** 한글로 썼을 때 띄우는 예시 카드 */
   const [koreanHelp, setKoreanHelp] = useState<KoHelp | null>(null);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const sttSupported = getSttAdapter().isSupported();
 
@@ -112,6 +114,40 @@ export default function ChatScreen() {
     conversation?.status === 'active' && messages.some((m) => m.role === 'user') && !finishing;
   // 화면 안 뒤로가기 · 안드로이드 뒤로가기 · 브라우저 뒤로가기를 한 곳에서 받는다
   const exit = useUnsavedExit(hasUnsaved);
+
+  /**
+   * 대화 지우기.
+   *
+   * 가드를 먼저 끈다. 안 끄면 화면을 빠져나갈 때 "저장하고 나갈까요?" 확인창이 다시 뜨는데,
+   * 방금 지우기로 결정한 사람에게 저장을 다시 묻는 건 앞뒤가 안 맞는다.
+   */
+  const navigation = useNavigation();
+  const deleteConversation = useChat((s) => s.deleteConversation);
+  const removeConversation = useCallback(() => {
+    if (!conversationId) return;
+    setDeleteOpen(false);
+    // 이 대화로 만들던 일기 초안이 남아 있으면 같이 치운다
+    if (finalize.conversationId === conversationId) finalize.clear();
+    deleteConversation(conversationId);
+    exit.leaveWithoutAsking(() => router.replace('/(tabs)'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, deleteConversation]);
+
+  // 헤더에 지우기 버튼을 단다. 화면 안에 두면 "대화 마치고 일기 만들기" 옆에 붙어서,
+  // 저장하려다 지우는 실수가 나기 쉽다.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        messages.some((m) => m.role === 'user') ? (
+          <IconButton
+            icon="trash-2"
+            variant="ghost"
+            accessibilityLabel="이 대화 지우기"
+            onPress={() => setDeleteOpen(true)}
+          />
+        ) : null,
+    });
+  }, [navigation, messages]);
 
   const savedExpressionSet = useMemo(
     () => new Set(expressions.expressions.map((e) => e.expression)),
@@ -492,6 +528,15 @@ export default function ChatScreen() {
           setPendingCorrection(null);
         }}
         onClose={() => setPracticeTarget(null)}
+      />
+
+      <ConfirmDialog
+        visible={deleteOpen}
+        title="이 대화를 지울까요?"
+        description={`지금까지 주고받은 ${messages.filter((m) => m.role === 'user').length}개의 내 문장과 교정 내용이 함께 사라져요. 되돌릴 수 없어요.${'\n\n'}이 대화로 이미 만든 일기가 있다면 그 일기는 그대로 남아요.`}
+        confirmLabel="지우기"
+        onConfirm={removeConversation}
+        onCancel={() => setDeleteOpen(false)}
       />
 
       <ExitConfirmDialog

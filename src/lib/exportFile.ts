@@ -21,14 +21,49 @@ export type ExportOutcome =
 interface ExportInput {
   text: string;
   fileName: string;
-  /** 공유 시트에 보일 제목 */
-  title: string;
 }
+
+/**
+ * 공유에 쓸 파일 형식.
+ *
+ * **.txt / text/plain 이어야 한다.** Chromium은 공유할 수 있는 파일의 확장자와 MIME을
+ * 각각 허용목록으로 검사하고 둘 중 하나라도 목록에 없으면 거부하는데, `.json`과
+ * `application/json`은 양쪽 목록 모두에 없다. 그래서 처음에 만든 .json 백업은
+ * 안드로이드 크롬에서 **한 번도 공유된 적이 없었다** — NotAllowedError로 거부됐고,
+ * 그게 "버튼을 눌러도 아무 반응이 없다"의 진짜 원인이었다.
+ *
+ * canShare()는 MIME을 검사하지 않고 files가 비었는지만 본다. 즉 canShare가 true라고
+ * 공유가 되는 게 아니다. 그래서 안전한 형식을 우리가 직접 정해서 쓴다.
+ */
+const SHARE_MIME = 'text/plain';
 
 /** 파일 하나를 만든다. 웹이 아니면 null */
 function makeFile(text: string, fileName: string, mimeType: string): File | null {
   if (Platform.OS !== 'web' || typeof File === 'undefined') return null;
   return new File([text], fileName, { type: mimeType });
+}
+
+/**
+ * 아이폰 홈 화면 앱인지.
+ *
+ * 여기서는 a[download]를 절대 쓰면 안 된다. 다운로드를 걸면 "Open in …" 시스템 화면에
+ * 갇혀서 앱을 강제 종료해야만 빠져나온다(WebKit 버그). 공유가 실패하면 다운로드로 내려가는
+ * 게 보통이지만, 이 조합에서만은 내려가는 것이 더 나쁘다.
+ */
+function isIosStandalone(): boolean {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined' || typeof window === 'undefined') {
+    return false;
+  }
+  const ua = navigator.userAgent ?? '';
+  const isApple =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints ?? 0) > 1);
+  if (!isApple) return false;
+  // 아이폰 설치형 웹앱은 display-mode가 standalone이 아니라 fullscreen으로 잡히는 경우가 있어 둘 다 본다
+  const standalone =
+    (navigator as { standalone?: boolean }).standalone === true ||
+    window.matchMedia?.('(display-mode: standalone), (display-mode: fullscreen)').matches === true;
+  return standalone;
 }
 
 /**
@@ -38,32 +73,25 @@ function makeFile(text: string, fileName: string, mimeType: string): File | null
  * 앞에서 await를 하면 제스처가 끊겨서 iOS가 거부한다. 그래서 파일 만들기까지는 전부 동기로
  * 끝내고 share를 첫 await로 둔다.
  */
-function trySharePlan(text: string, fileName: string, title: string): (() => Promise<ExportOutcome>) | null {
+function trySharePlan(text: string, fileName: string): (() => Promise<ExportOutcome>) | null {
   if (Platform.OS !== 'web' || typeof navigator === 'undefined') return null;
   const share = navigator.share?.bind(navigator);
   const canShare = navigator.canShare?.bind(navigator);
   if (!share || !canShare) return null;
 
-  // JSON을 못 받는 기기가 있어서 text/plain으로도 시도해 본다.
-  // 확장자는 그대로 .json으로 둔다 — 받는 쪽(드라이브·메일)은 확장자를 보고, 우리 가져오기도
-  // 확장자로 찾기 쉬워진다.
-  const candidates = [
-    makeFile(text, fileName, 'application/json'),
-    makeFile(text, fileName, 'text/plain'),
-  ].filter((file): file is File => file !== null);
-
-  const file = candidates.find((candidate) => {
-    try {
-      return canShare({ files: [candidate] });
-    } catch {
-      return false;
-    }
-  });
+  const file = makeFile(text, fileName, SHARE_MIME);
   if (!file) return null;
+  try {
+    if (!canShare({ files: [file] })) return null;
+  } catch {
+    return null;
+  }
 
   return async () => {
     try {
-      await share({ files: [file], title });
+      // files 외에 title/text/url을 함께 넘기지 않는다. 아이폰 공유 시트가 title을 별도
+      // 항목으로 끼워 넣으면서 파일 대상이 깨지는 경우가 있고, 얻는 것은 거의 없다.
+      await share({ files: [file] });
       return { ok: true, via: 'share' };
     } catch (error) {
       const name = error instanceof Error ? error.name : '알 수 없음';
@@ -87,7 +115,7 @@ function tryDownload(text: string, fileName: string): ExportOutcome {
     return { ok: false, reason: 'unsupported' };
   }
   try {
-    const blob = new Blob([text], { type: 'application/json' });
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -111,8 +139,8 @@ function tryDownload(text: string, fileName: string): ExportOutcome {
  * 공유가 우선인 이유: 다운로드는 파일을 '다운로드 폴더'에 떨어뜨릴 뿐이고, 그걸 드라이브에
  * 올리거나 메일에 붙이는 건 사용자가 따로 해야 한다. 공유 시트는 그 자리에서 끝난다.
  */
-export async function exportBackupFile({ text, fileName, title }: ExportInput): Promise<ExportOutcome> {
-  const sharePlan = trySharePlan(text, fileName, title);
+export async function exportBackupFile({ text, fileName }: ExportInput): Promise<ExportOutcome> {
+  const sharePlan = trySharePlan(text, fileName);
   if (sharePlan) {
     const result = await sharePlan();
     // 사용자가 직접 닫은 것만 그대로 알린다. 다운로드로 몰래 넘어가면 원치 않은 파일을 받게 된다.
@@ -120,10 +148,11 @@ export async function exportBackupFile({ text, fileName, title }: ExportInput): 
     // 그 밖의 실패는 전부 다운로드로 내려간다 — 여기서 멈추면 버튼이 죽은 것처럼 보인다.
   }
 
-  const downloaded = tryDownload(text, fileName);
-  if (downloaded.ok) return downloaded;
+  // 아이폰 홈 화면 앱에서는 다운로드가 앱을 빠져나가지 못하게 만든다 — 시도조차 하지 않는다
+  if (isIosStandalone()) return { ok: false, reason: 'unsupported' };
+
   // 공유도 다운로드도 안 되는 기기가 있다. 그럴 땐 그렇다고 말해야 클립보드로라도 저장한다.
-  return downloaded;
+  return tryDownload(text, fileName);
 }
 
 /**
@@ -135,7 +164,7 @@ export async function exportBackupFile({ text, fileName, title }: ExportInput): 
 let shareSupport: boolean | null = null;
 
 export function canShareFiles(): boolean {
-  if (shareSupport === null) shareSupport = trySharePlan('{}', 'probe.json', 'probe') !== null;
+  if (shareSupport === null) shareSupport = trySharePlan('{}', 'probe.txt') !== null;
   return shareSupport;
 }
 
@@ -149,9 +178,12 @@ export function canShareFiles(): boolean {
  *
  * 날짜를 앞이 아니라 뒤에 두는 이유는 파일 앱에서 이름순 정렬을 하면 D-log 백업끼리 모이고
  * 그 안에서 날짜순이 되기 때문이다.
+ *
+ * 확장자가 .json이 아니라 .txt인 이유는 SHARE_MIME 설명 참고 — 크롬이 .json 공유를 거부한다.
+ * 내용은 그대로 JSON이고, 가져오기는 확장자가 아니라 내용을 보고 판별한다.
  */
 export function backupFileName(now: Date = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  return `D-log-backup-${stamp}.json`;
+  return `D-log-backup-${stamp}.txt`;
 }

@@ -57,7 +57,7 @@ function stubDownload(works: boolean): { clicked: string[] } {
   return { clicked };
 }
 
-const input = { text: '{"a":1}', fileName: 'D-log-backup-2026-08-20.json', title: 'D-log 백업' };
+const input = { text: '{"a":1}', fileName: 'D-log-backup-2026-08-20.txt' };
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -74,7 +74,9 @@ describe('백업 파일 내보내기', () => {
       },
     });
     await expect(exportBackupFile(input)).resolves.toEqual({ ok: true, via: 'share' });
-    expect(shared[0].name).toBe('D-log-backup-2026-08-20.json');
+    expect(shared[0].name).toBe('D-log-backup-2026-08-20.txt');
+    // 크롬 허용목록에 있는 형식이어야 공유가 거부되지 않는다
+    expect(shared[0].type).toBe('text/plain');
   });
 
   it('사용자가 공유 시트를 닫으면(AbortError) 취소로 두고 다운로드하지 않는다', async () => {
@@ -103,7 +105,7 @@ describe('백업 파일 내보내기', () => {
       },
     });
     await expect(exportBackupFile(input)).resolves.toEqual({ ok: true, via: 'download' });
-    expect(clicked).toEqual(['D-log-backup-2026-08-20.json']);
+    expect(clicked).toEqual(['D-log-backup-2026-08-20.txt']);
   });
 
   it('알 수 없는 오류에도 다운로드로 내려간다', async () => {

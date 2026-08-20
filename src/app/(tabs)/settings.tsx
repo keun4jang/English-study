@@ -126,11 +126,10 @@ export default function SettingsTab() {
      * 않는다(NotAllowedError). exportBackupFile은 공유를 부를 때까지 동기로 돌기 때문에
      * 이 호출을 첫 줄에 두면 제스처가 그대로 이어진다.
      */
-    const running = exportBackupFile({
-      text: makeBackupText(),
-      fileName: backupFileName(),
-      title: 'D-log 백업',
-    });
+    // 파일 이름은 한 번만 만들어 두고 안내 문구에도 같은 값을 쓴다.
+    // 다시 부르면 자정을 넘기는 순간 화면에 적힌 이름과 실제 파일 이름이 달라진다.
+    const fileName = backupFileName();
+    const running = exportBackupFile({ text: makeBackupText(), fileName });
 
     setExporting(true);
     setExportStatus(null);
@@ -138,10 +137,18 @@ export default function SettingsTab() {
     running
       .then((result) => {
         if (result.ok) {
+          /*
+           * 성공을 단정하지 않는다.
+           *
+           * 공유가 resolve해도 그건 "고른 앱에 넘겼다"는 뜻이지 드라이브 업로드가 끝났다는
+           * 뜻이 아니다. 다운로드는 아예 성공을 알 방법이 없다(브라우저에 완료 이벤트가 없다).
+           * 여기서 "저장됐어요"라고 단정하면 사용자가 백업된 줄 알고 앱 데이터를 지운다 —
+           * 이 앱에서 나올 수 있는 최악의 실패다.
+           */
           setExportStatus(
             result.via === 'share'
-              ? '보냈어요. 드라이브·메일 앱에서 확인해 주세요.'
-              : `파일을 내려받았어요. 폰의 "내 파일 → 다운로드"에 ${backupFileName()} 로 있어요.`,
+              ? '보냈어요 — 고른 앱에서 저장이 끝났는지 한 번 확인해 주세요.'
+              : `파일을 내려받았어요. 폰의 "내 파일 → 다운로드"에서 ${fileName} 이 있는지 확인해 주세요. 안 보이면 아래 "JSON 복사하기"를 써 주세요.`,
           );
           return;
         }
@@ -151,7 +158,7 @@ export default function SettingsTab() {
         setExportStatus(
           result.reason === 'failed'
             ? `이 기기에서는 파일로 내보내지 못했어요 (${result.message}). 아래 "JSON 복사하기"로 저장해 주세요.`
-            : '이 기기에서는 파일 내보내기를 지원하지 않아요. 아래 "JSON 복사하기"로 저장해 주세요.',
+            : '이 기기에서는 파일로 내보낼 수 없어요. 아래 "JSON 복사하기"로 저장해 주세요.',
         );
       })
       .catch((error: unknown) => {
@@ -253,7 +260,7 @@ export default function SettingsTab() {
           />
           <AppText variant="caption" color="secondary">
             {canShareFiles()
-              ? '백업 파일을 만들어 폰의 공유 화면으로 보내요. 거기서 구글 드라이브에 저장하거나 메일·카카오톡으로 나에게 보낼 수 있어요.'
+              ? '백업 파일을 만들어 폰의 공유 화면으로 넘겨요. 거기서 구글 드라이브·메일·카카오톡·파일 앱 중에 골라 저장하면 돼요. D-log가 직접 어딘가에 올리는 건 아니에요.'
               : '백업 파일을 내려받아요. 받은 파일을 구글 드라이브에 올리거나 메일에 첨부해 두면 돼요.'}
           </AppText>
           {exportStatus ? (

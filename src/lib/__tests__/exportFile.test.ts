@@ -2,15 +2,16 @@ import { backupFileName } from '../exportFile';
 
 describe('백업 파일 이름', () => {
   it('날짜가 들어가서 목록에서 알아볼 수 있다', () => {
-    expect(backupFileName(new Date(2026, 7, 20))).toBe('D-log-backup-2026-08-20.json');
+    expect(backupFileName(new Date(2026, 7, 20))).toBe('D-log-backup-2026-08-20.txt');
   });
 
   it('한 자리 월·일에 0을 채운다 (파일 목록에서 날짜순 정렬이 깨지지 않게)', () => {
-    expect(backupFileName(new Date(2026, 0, 5))).toBe('D-log-backup-2026-01-05.json');
+    expect(backupFileName(new Date(2026, 0, 5))).toBe('D-log-backup-2026-01-05.txt');
   });
 
-  it('.json 확장자를 붙인다 — 가져오기에서 파일을 찾을 때 기준이 된다', () => {
-    expect(backupFileName()).toMatch(/\.json$/);
+  it('.txt 확장자를 쓴다', () => {
+    // 크롬이 .json 파일 공유를 거부한다(허용목록에 없음). 내용은 그대로 JSON이다.
+    expect(backupFileName()).toMatch(/\.txt$/);
   });
 
   it('ASCII만 쓴다', () => {

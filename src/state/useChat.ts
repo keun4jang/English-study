@@ -20,6 +20,13 @@ interface ChatState {
   /** "교정문 적용" 시 사용자 메시지 텍스트를 교정문으로 교체 */
   updateMessageText: (id: string, text: string) => void;
   finishConversation: (id: string) => void;
+  /**
+   * 대화를 통째로 지운다 (대화 + 그 안의 메시지 전부).
+   *
+   * 이미 일기로 만든 대화를 지워도 **일기는 남는다.** 일기는 별도 저장소에 있고
+   * conversationId만 가리키고 있을 뿐이라, 그 연결이 끊겨도 일기 본문은 그대로다.
+   */
+  deleteConversation: (id: string) => void;
   /** 사용자 발화가 없는 빈 active 대화 정리 (인사만 남은 대화의 무한 누적 방지) */
   pruneEmptyConversations: () => void;
   wipeAll: () => void;
@@ -64,6 +71,12 @@ export const useChat = create<ChatState>()(
           conversations: s.conversations.map((c) =>
             c.id === id ? { ...c, status: 'finished' as const } : c,
           ),
+        })),
+      deleteConversation: (id) =>
+        set((s) => ({
+          conversations: s.conversations.filter((c) => c.id !== id),
+          // 메시지를 같이 지우지 않으면 대화만 사라지고 메시지가 영영 남는다
+          messages: s.messages.filter((m) => m.conversationId !== id),
         })),
       pruneEmptyConversations: () =>
         set((s) => {
