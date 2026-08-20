@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { AccessibilityInfo, Animated, View } from 'react-native';
 
 import { DiaryRow } from '@/components/diary/DiaryRow';
+import { MemoryCard } from '@/components/diary/MemoryCard';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isBuiltInAI } from '@/ai';
 import { calcStreakGenerous, diffDays, formatDateKo, todayKey } from '@/lib/dates';
 import { computeDailyProgress } from '@/lib/goals';
+import { findMemory } from '@/lib/onThisDay';
 import { usePracticeQueue } from '@/lib/practiceQueue';
 import { useAuth } from '@/state/useAuth';
 import { useChat } from '@/state/useChat';
@@ -47,6 +49,11 @@ export default function TodayHome() {
 
   const today = todayKey();
   const todayEntries = useMemo(() => selectEntriesByDate(entries, today), [entries, today]);
+  // 작년(또는 몇 달 전) 오늘 쓴 일기 — 다시 읽게 만드는 자리
+  const memories = useMemo(
+    () => findMemory(selectActiveEntries(entries), today),
+    [entries, today],
+  );
   // 진행 중인 AI 대화 — 자정이 지나도 사라지지 않고 이어서 할 수 있다
   const activeConversation = useMemo(
     () =>
@@ -188,6 +195,8 @@ export default function TodayHome() {
 
         <UpdateBanner />
         <InstalledNameNotice />
+
+        <MemoryCard memories={memories} />
 
         {/* 오늘의 목표 — 부드러운 진행 표시 (미달성 죄책감 문구 없음) */}
         <GoalProgress

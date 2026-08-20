@@ -5,6 +5,7 @@ import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
+import { MoodTrend } from '@/components/ui/MoodTrend';
 import { Screen } from '@/components/ui/Screen';
 import { calcStreakGenerous, todayKey } from '@/lib/dates';
 import { countSentences } from '@/lib/goals';
@@ -73,6 +74,14 @@ export default function StatsScreen() {
               하루는 쉬어도 기록이 이어져요.
             </AppText>
           ) : null}
+        </Card>
+
+        <Card style={{ gap: spacing.sm }}>
+          <AppText variant="subheading">감정 흐름</AppText>
+          <AppText variant="caption" color="secondary">
+            최근 30일
+          </AppText>
+          <MoodTrend entries={active} />
         </Card>
 
         <Card style={{ gap: spacing.sm }}>

@@ -6,6 +6,7 @@ import { Linking, Platform, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { LockSettings } from '@/components/ui/LockSettings';
 import { OptionGroup } from '@/components/ui/OptionGroup';
 import { Screen } from '@/components/ui/Screen';
 import { Toggle } from '@/components/ui/Toggle';
@@ -447,12 +448,14 @@ export default function SettingsTab() {
 
         {/* 개인정보 */}
         <SectionTitle>개인정보</SectionTitle>
+        <LockSettings />
         <Card style={{ gap: spacing.md }}>
           <AppText variant="bodySmall" color="secondary">
             · 일기는 기본으로 비공개예요.{'\n'}· 음성 원본은 기본적으로 저장하지 않아요.{'\n'}· 사진은
-            압축 후 위치 정보(EXIF)가 제거돼요.{'\n'}· AI 교정을 사용하면 입력한 텍스트가 서버와 AI
-            제공자(Anthropic)에 전송될 수 있어요. 민감한 개인정보(주민번호, 주소 등)는 일기에 쓰지
-            않는 것이 좋아요.{'\n'}· 종단간 암호화는 아직 제공되지 않아요.
+            압축 후 위치 정보(EXIF)가 제거돼요.{'\n'}· 교정과 예시는 <AppText variant="bodySmall" weight="700">
+            기기 안에서만</AppText> 계산돼요. 쓴 글이 서버나 외부 AI로 나가지 않고, 인터넷이
+            없어도 동작해요.{'\n'}· 일기 본문은 암호화되어 있지 않아요. 기기를 잃어버렸을 때를
+            대비하려면 앱 잠금과 폰 자체 잠금을 함께 쓰는 게 좋아요.
           </AppText>
         </Card>
 

@@ -6,6 +6,7 @@ import { useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
+import { LockGate } from '@/components/ui/LockGate';
 import { appConfig } from '@/config/appConfig';
 import { useHydrated } from '@/lib/useHydrated';
 import { fonts, palette } from '@/theme/tokens';
@@ -81,5 +82,16 @@ export default function RootLayout() {
     Lora_600SemiBold,
   });
   const ready = hydrated && (fontsLoaded || Boolean(fontError));
-  return <SafeAreaProvider>{ready ? <RootStack /> : <SplashFallback />}</SafeAreaProvider>;
+  // 잠금은 저장소를 다 읽은 뒤에 판단한다 — 먼저 그리면 잠긴 앱이 한순간 열려 보인다
+  return (
+    <SafeAreaProvider>
+      {ready ? (
+        <LockGate>
+          <RootStack />
+        </LockGate>
+      ) : (
+        <SplashFallback />
+      )}
+    </SafeAreaProvider>
+  );
 }
