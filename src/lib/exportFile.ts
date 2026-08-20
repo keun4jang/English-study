@@ -66,11 +66,17 @@ function trySharePlan(text: string, fileName: string, title: string): (() => Pro
       await share({ files: [file], title });
       return { ok: true, via: 'share' };
     } catch (error) {
-      // 공유 시트를 닫은 것은 실패가 아니다. 에러처럼 보여주면 사용자가 뭔가 잘못한 줄 안다.
-      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'NotAllowedError')) {
-        return { ok: false, reason: 'cancelled' };
-      }
-      return { ok: false, reason: 'failed', message: error instanceof Error ? error.message : '알 수 없는 오류' };
+      const name = error instanceof Error ? error.name : '알 수 없음';
+      /*
+       * **AbortError만 취소다.**
+       *
+       * 처음에는 NotAllowedError도 취소로 묶었는데, 그건 완전히 다른 뜻이다 — 사용자 제스처가
+       * 유효하지 않거나 권한이 없어서 공유 시트를 **열지도 못한** 상태다. 이걸 취소로 처리하면
+       * 조용히 넘어가면서 다운로드 대안으로도 안 내려가서, 버튼을 눌러도 아무 일도 일어나지
+       * 않는다. 실제로 그 증상이 보고됐다.
+       */
+      if (name === 'AbortError') return { ok: false, reason: 'cancelled' };
+      return { ok: false, reason: 'failed', message: name };
     }
   };
 }
@@ -109,10 +115,15 @@ export async function exportBackupFile({ text, fileName, title }: ExportInput): 
   const sharePlan = trySharePlan(text, fileName, title);
   if (sharePlan) {
     const result = await sharePlan();
-    // 취소는 그대로 알린다. 다운로드로 몰래 넘어가면 사용자가 원치 않은 파일을 받게 된다.
+    // 사용자가 직접 닫은 것만 그대로 알린다. 다운로드로 몰래 넘어가면 원치 않은 파일을 받게 된다.
     if (result.ok || result.reason === 'cancelled') return result;
+    // 그 밖의 실패는 전부 다운로드로 내려간다 — 여기서 멈추면 버튼이 죽은 것처럼 보인다.
   }
-  return tryDownload(text, fileName);
+
+  const downloaded = tryDownload(text, fileName);
+  if (downloaded.ok) return downloaded;
+  // 공유도 다운로드도 안 되는 기기가 있다. 그럴 땐 그렇다고 말해야 클립보드로라도 저장한다.
+  return downloaded;
 }
 
 /**

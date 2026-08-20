@@ -118,31 +118,48 @@ export default function SettingsTab() {
    * 우리가 구글 드라이브에 직접 올리는 게 아니라, 파일을 폰에 건네주고 사용자가 드라이브든
    * 메일이든 고르게 한다. 그래서 새 API 키도, 계정 연결도, 비용도 없다.
    */
-  const exportFile = async () => {
+  const exportFile = () => {
     if (exporting) return;
+    /*
+     * **누르자마자 곧바로 시작한다.** setState를 먼저 하면 렌더가 끼어들면서 브라우저가
+     * 이걸 "사용자가 방금 누른 동작"으로 보지 않을 수 있고, 그러면 공유 시트가 열리지
+     * 않는다(NotAllowedError). exportBackupFile은 공유를 부를 때까지 동기로 돌기 때문에
+     * 이 호출을 첫 줄에 두면 제스처가 그대로 이어진다.
+     */
+    const running = exportBackupFile({
+      text: makeBackupText(),
+      fileName: backupFileName(),
+      title: 'D-log 백업',
+    });
+
     setExporting(true);
     setExportStatus(null);
-    try {
-      const result = await exportBackupFile({
-        text: makeBackupText(),
-        fileName: backupFileName(),
-        title: 'D-log 백업',
-      });
-      if (result.ok) {
+
+    running
+      .then((result) => {
+        if (result.ok) {
+          setExportStatus(
+            result.via === 'share'
+              ? '보냈어요. 드라이브·메일 앱에서 확인해 주세요.'
+              : `파일을 내려받았어요. 폰의 "내 파일 → 다운로드"에 ${backupFileName()} 로 있어요.`,
+          );
+          return;
+        }
+        // 사용자가 공유 시트를 직접 닫은 경우에만 조용히 넘어간다
+        if (result.reason === 'cancelled') return;
+        // 그 외에는 반드시 무언가를 말한다 — 아무 반응이 없으면 버튼이 고장 난 줄 안다
         setExportStatus(
-          result.via === 'share'
-            ? '보냈어요. 드라이브·메일 앱에서 확인해 주세요.'
-            : '파일로 저장했어요. 다운로드 폴더에 있어요.',
+          result.reason === 'failed'
+            ? `이 기기에서는 파일로 내보내지 못했어요 (${result.message}). 아래 "JSON 복사하기"로 저장해 주세요.`
+            : '이 기기에서는 파일 내보내기를 지원하지 않아요. 아래 "JSON 복사하기"로 저장해 주세요.',
         );
-      } else if (result.reason === 'cancelled') {
-        // 사용자가 그냥 닫은 것이다 — 아무 말도 하지 않는다
-        setExportStatus(null);
-      } else {
-        setExportStatus('파일로 내보내지 못했어요. 아래 "JSON 복사하기"로 저장해 주세요.');
-      }
-    } finally {
-      setExporting(false);
-    }
+      })
+      .catch((error: unknown) => {
+        setExportStatus(
+          `내보내는 중 문제가 생겼어요 (${error instanceof Error ? error.name : '알 수 없음'}). 아래 "JSON 복사하기"로 저장해 주세요.`,
+        );
+      })
+      .finally(() => setExporting(false));
   };
 
   /** 예전 방식 — 파일이 안 되는 환경을 위해 남겨 둔다 */
