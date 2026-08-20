@@ -13,28 +13,14 @@
 > ⚠️ `sunn-us/SUIT`는 공식 저장소가 아니다. 폰트 파일이 없고 CSS 안에 외부 추적
 > 픽셀만 들어 있다. 폰트를 갱신할 때 반드시 `sun-typeface`인지 확인할 것.
 
-## Gaegu (개구 — 감정 문구 전용 손글씨)
+## Gaegu (개구) — 뺐습니다
 
-- 출처: https://github.com/google/fonts/tree/main/ofl/gaegu (디자이너: JIKJI SOFT)
-- 라이선스: SIL Open Font License 1.1 (`LICENSE-Gaegu.txt`) — 상업적 사용·번들·수정·재배포 가능
-- Reserved Font Name: **없음**. 저작권 표기가 "Copyright 2018 The Gaegu Project Authors"뿐이라
-  RFN 조항이 걸리지 않으므로, 서브셋을 만들어도 family name `Gaegu`를 그대로 쓸 수 있다.
-- 포함한 웨이트: Regular(400) / Bold(700) — 서브셋 후 합계 약 131 KiB
-  (원본 전체는 woff2로도 Regular 290KB / Bold 485KB다)
+한때 '오늘의 편지' 질문과 빈 화면 안내에 손글씨 폰트를 썼는데, 매일 읽는 문장이라
+가독성이 더 중요하다고 판단해 본문 폰트(SUIT)로 되돌렸습니다. 쓰는 곳이 없어진 폰트를
+계속 실으면 첫 로딩만 143 KiB 무거워지므로 파일도 함께 뺐습니다.
 
-### 서브셋
-
-앱 소스(`src/**/*.ts(x)`)에 실제로 등장하는 한글 음절만 남겼다. 재생성:
-
-```bash
-pip install fonttools brotli
-python3 scripts/subset-hand-font.py <Gaegu 원본 ttf 폴더>
-```
-
-**이 폰트는 고정 문구에만 쓴다** — 닉네임·일기 본문 같은 사용자 입력에는 쓰지 않는다.
-서브셋에 없는 글자는 브라우저가 그 한 글자만 SUIT로 떨어뜨려 한 단어 안에서 글씨체가
-섞이기 때문이다. `src/theme/__tests__/handFontCharset.test.ts`가 소스의 한글이 전부
-서브셋 안에 있는지 감시한다.
+되돌리려면 이 커밋 이전 기록에 폰트 파일과 서브셋 스크립트(`scripts/subset-hand-font.py`)가
+그대로 남아 있습니다.
 
 ## Lora (영어 일기 본문)
 

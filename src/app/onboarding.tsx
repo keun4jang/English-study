@@ -69,7 +69,7 @@ export default function Onboarding() {
             <AppText variant="title" align="center">
               {appConfig.appName}
             </AppText>
-            <AppText variant="editorialBody" color="secondary" align="center">
+            <AppText variant="body" color="secondary" align="center">
               오늘 있었던 일을 배우고 싶은 언어로 이야기하면,{'\n'}AI 친구가 함께 대화하며{'\n'}
               하나의 예쁜 일기로 완성해 드려요.
             </AppText>

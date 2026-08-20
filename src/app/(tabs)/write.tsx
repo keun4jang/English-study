@@ -64,7 +64,7 @@ export default function WriteTab() {
   return (
     <Screen>
       <View style={{ gap: spacing.lg, paddingTop: spacing.md }}>
-        <AppText variant="editorial">오늘은 어떻게 기록할까요?</AppText>
+        <AppText variant="title">오늘은 어떻게 기록할까요?</AppText>
         <ModeCard
           icon="message-circle"
           title={`AI와 ${langName}로 이야기하기`}

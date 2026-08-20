@@ -45,8 +45,7 @@ export function EmptyState({
       }}
     >
       <AppIcon name={icon} size={32} color="accent" />
-      {/* 빈 화면은 '아무것도 없다'를 알리는 자리라 말투가 제일 중요하다 — 손글씨로 쓴다 */}
-      <AppText variant="editorialTitle" align="center">
+      <AppText variant="subheading" align="center">
         {title}
       </AppText>
       {description ? (
