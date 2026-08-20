@@ -397,6 +397,14 @@ export default function SettingsTab() {
             value={settings.diary.showKoreanTranslation}
             onChange={(showKoreanTranslation) => settings.updateDiary({ showKoreanTranslation })}
           />
+          {/* 학습 통계는 홈에서 옮겨 왔다. 홈은 오늘 쓰는 화면이고 숫자는 여기가 제자리다 */}
+          <Button
+            small
+            variant="secondary"
+            icon="bar-chart-2"
+            label="학습 통계 보기"
+            onPress={() => router.push('/stats')}
+          />
           <Button small variant="secondary" icon="trash-2" label="휴지통 보기" onPress={() => router.push('/trash')} />
         </Card>
 

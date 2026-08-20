@@ -8,6 +8,9 @@ import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { VersionFooter } from '@/components/ui/VersionFooter';
+import { usePracticeQueue } from '@/lib/practiceQueue';
+import { todayKey } from '@/lib/dates';
+import { useExpressions } from '@/state/useExpressions';
 import { useSettings } from '@/state/useSettings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -52,6 +55,12 @@ export default function WriteTab() {
   const language = useSettings((s) => s.learning.language);
   const langName = language === 'en' ? '영어' : '일본어';
 
+  // 복습·연습 알림은 홈에서 옮겨 왔다. 홈은 오늘 쓰는 화면이고, 이건 "무엇을 할까"의 화면이다.
+  const expressions = useExpressions((s) => s.expressions);
+  const today = todayKey();
+  const reviewDue = expressions.filter((e) => e.nextReviewDate <= today).length;
+  const practiceQueue = usePracticeQueue();
+
   return (
     <Screen>
       <View style={{ gap: spacing.lg, paddingTop: spacing.md }}>
@@ -69,9 +78,23 @@ export default function WriteTab() {
           onPress={() => router.push('/write/text')}
         />
         <ModeCard
+          icon="mic"
+          title="다시 말해보기"
+          description={
+            practiceQueue.length > 0
+              ? `배운 문장 ${practiceQueue.length}개를 소리 내어 연습해요.`
+              : '교정받은 문장을 소리 내어 연습해요.'
+          }
+          onPress={() => router.push('/practice')}
+        />
+        <ModeCard
           icon="book-open"
           title="단어장 복습하기"
-          description="저장한 표현을 카드로 복습해요."
+          description={
+            reviewDue > 0
+              ? `오늘 복습할 표현이 ${reviewDue}개 있어요.`
+              : '저장한 표현을 카드로 복습해요.'
+          }
           onPress={() => router.push('/expressions')}
         />
       </View>

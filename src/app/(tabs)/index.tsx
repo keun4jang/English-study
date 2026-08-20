@@ -3,28 +3,34 @@ import React, { useMemo, useState } from 'react';
 import { AccessibilityInfo, Animated, View } from 'react-native';
 
 import { DiaryRow } from '@/components/diary/DiaryRow';
-import { MemoryCard } from '@/components/diary/MemoryCard';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { GoalProgress } from '@/components/ui/GoalProgress';
-import { Screen } from '@/components/ui/Screen';
 import { InstalledNameNotice } from '@/components/ui/InstalledNameNotice';
+import { Screen } from '@/components/ui/Screen';
 import { UpdateBanner } from '@/components/ui/UpdateBanner';
 import { VersionFooter } from '@/components/ui/VersionFooter';
-import { isBuiltInAI } from '@/ai';
-import { calcStreakGenerous, diffDays, formatDateKo, todayKey } from '@/lib/dates';
-import { computeDailyProgress } from '@/lib/goals';
-import { findMemory } from '@/lib/onThisDay';
-import { usePracticeQueue } from '@/lib/practiceQueue';
+import { diffDays, formatDateKo, todayKey } from '@/lib/dates';
 import { useAuth } from '@/state/useAuth';
 import { useChat } from '@/state/useChat';
-import { selectActiveEntries, selectEntriesByDate, useDiary } from '@/state/useDiary';
-import { useExpressions } from '@/state/useExpressions';
+import { selectEntriesByDate, useDiary } from '@/state/useDiary';
 import { useSettings } from '@/state/useSettings';
 import { spacing } from '@/theme/tokens';
+
+/**
+ * 홈 — **오늘 일기를 쓰는 것 하나만** 한다.
+ *
+ * 예전에는 목표 진행바, 연속 기록, 그날의 기억, 복습 알림, 연습 알림, 학습 통계·단어장
+ * 버튼이 전부 여기 있었다. 하나하나는 쓸모가 있었지만 한 화면에 모아 놓으니
+ * "지금 뭘 하라는 건지" 알 수 없는 화면이 됐다.
+ *
+ * 그래서 홈에 남긴 것은 오늘 쓰는 데 필요한 것뿐이다.
+ *   1) 오늘이 며칠인지    2) 쓰다 만 게 있는지    3) 무엇에 대해 쓸지    4) 오늘 쓴 것
+ * 나머지는 없앤 게 아니라 제자리로 옮겼다 — 되돌아보는 것은 달력, 숫자는 학습 통계,
+ * 연습·단어장은 쓰기 탭.
+ */
 
 const DAILY_PROMPTS = [
   '오늘 가장 기억에 남는 순간은 무엇이었나요?',
@@ -40,7 +46,6 @@ export default function TodayHome() {
   const user = useAuth((s) => s.user);
   const entries = useDiary((s) => s.entries);
   const draft = useDiary((s) => s.draft);
-  const expressions = useExpressions((s) => s.expressions);
   const language = useSettings((s) => s.learning.language);
   const reduceMotion = useSettings((s) => s.design.reduceMotion);
 
@@ -49,11 +54,7 @@ export default function TodayHome() {
 
   const today = todayKey();
   const todayEntries = useMemo(() => selectEntriesByDate(entries, today), [entries, today]);
-  // 작년(또는 몇 달 전) 오늘 쓴 일기 — 다시 읽게 만드는 자리
-  const memories = useMemo(
-    () => findMemory(selectActiveEntries(entries), today),
-    [entries, today],
-  );
+
   // 진행 중인 AI 대화 — 자정이 지나도 사라지지 않고 이어서 할 수 있다
   const activeConversation = useMemo(
     () =>
@@ -63,19 +64,6 @@ export default function TodayHome() {
           chatMessages.some((m) => m.conversationId === c.id && m.role === 'user'),
       ) ?? null,
     [conversations, chatMessages],
-  );
-
-  const active = useMemo(() => selectActiveEntries(entries), [entries]);
-  const streakInfo = useMemo(
-    () => calcStreakGenerous(active.map((e) => e.localDate), today),
-    [active, today],
-  );
-  const reviewDue = expressions.filter((e) => e.nextReviewDate <= today).length;
-  const practiceQueue = usePracticeQueue();
-  const dailyGoal = useSettings((s) => s.learning.dailyGoalSentences);
-  const progress = useMemo(
-    () => computeDailyProgress({ messages: chatMessages, entries, today, goal: dailyGoal }),
-    [chatMessages, entries, today, dailyGoal],
   );
 
   // 오늘의 질문: 날짜 기반 기본 + "다른 질문 보기"로 교체 (150ms fade, Reduce Motion 시 즉시)
@@ -104,117 +92,66 @@ export default function TodayHome() {
     });
   };
 
-  // 이어서 하기 카드들 — 우선순위: 초안 > 진행 중 대화 > 말하기 연습 > 복습
-  const nudgeCards: React.ReactElement[] = [];
-  if (draft) {
-    nudgeCards.push(
-      <Card key="draft" style={{ gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <AppIcon name="edit-3" size={18} color="accent" />
-          <AppText variant="label">작성 중인 일기가 있어요</AppText>
-        </View>
-        <AppText variant="bodySmall" color="secondary" numberOfLines={2}>
-          {draft.text || '(내용 없음)'}
-        </AppText>
-        <Button
-          size="compact"
-          variant="secondary"
-          label="이어서 쓰기"
-          onPress={() => router.push('/write/text')}
-        />
-      </Card>,
-    );
-  }
-  if (activeConversation) {
-    nudgeCards.push(
-      <Card key="conversation" style={{ gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <AppIcon name="message-circle" size={18} color="accent" />
-          <AppText variant="label">진행 중인 AI 대화가 있어요</AppText>
-        </View>
-        <Button size="compact" label="이어서 이야기하기" onPress={() => router.push('/write/chat')} />
-      </Card>,
-    );
-  }
-  if (practiceQueue.length > 0) {
-    nudgeCards.push(
-      <Card key="practice" style={{ gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <AppIcon name="mic" size={18} color="accent" />
-          <AppText variant="label">다시 말해볼 문장이 {practiceQueue.length}개 있어요</AppText>
-        </View>
-        <Button
-          size="compact"
-          variant="secondary"
-          label="연습 시작하기"
-          onPress={() => router.push('/practice')}
-        />
-      </Card>,
-    );
-  }
-  if (reviewDue > 0) {
-    nudgeCards.push(
-      <Card key="review" style={{ gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <AppIcon name="book-open" size={18} color="accent" />
-          <AppText variant="label">복습할 표현이 {reviewDue}개 있어요</AppText>
-        </View>
-        <Button
-          size="compact"
-          variant="secondary"
-          label="단어장 열기"
-          onPress={() => router.push('/expressions')}
-        />
-      </Card>,
-    );
-  }
+  /**
+   * 이어서 하기 — **하나만** 띄운다.
+   *
+   * 쓰다 만 것을 안 보여주면 그대로 잃어버린다. 하지만 초안·대화·연습·복습을 다 띄우면
+   * 오늘 쓰는 화면이 아니라 밀린 일 목록이 된다. 그래서 "오늘 쓰던 것"만 남기고
+   * (초안 > 진행 중 대화), 연습과 복습은 쓰기 탭으로 옮겼다.
+   */
+  const resume = draft
+    ? {
+        icon: 'edit-3' as const,
+        label: '작성 중인 일기가 있어요',
+        preview: draft.text || null,
+        action: '이어서 쓰기',
+        go: () => router.push('/write/text'),
+      }
+    : activeConversation
+      ? {
+          icon: 'message-circle' as const,
+          label: '진행 중인 AI 대화가 있어요',
+          preview: null,
+          action: '이어서 이야기하기',
+          go: () => router.push('/write/chat'),
+        }
+      : null;
 
   return (
     <Screen>
       <View style={{ gap: spacing.x20 }}>
-        {/* 배경 위 인사말 — 카드로 감싸지 않는다 */}
-        {/* 인사말 블록 — 날짜/이름은 붙이고, 그 아래 부가 안내 두 줄은 한 문단처럼 읽히지
-            않도록 간격을 벌린다 */}
+        {/* 인사말 — 날짜와 이름만. 연속 기록·목표 같은 숫자는 학습 통계로 옮겼다 */}
         <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" color="secondary">
             {formatDateKo(today)}
           </AppText>
           <AppText variant="display">{user?.nickname ?? '친구'}님, 안녕하세요</AppText>
-          {streakInfo.streak > 0 ? (
-            <AppText variant="bodySmall" color="secondary">
-              {streakInfo.streak}일째 이어서 기록하고 있어요
-              {streakInfo.restDaysUsed > 0 ? ' (하루 쉬어가도 이어져요)' : ''}
-            </AppText>
-          ) : null}
-          {isBuiltInAI() ? (
-            <AppText variant="caption" color="secondary" style={{ marginTop: spacing.xs }}>
-              내장 AI로 동작 중이에요 — 무료이고 인터넷 없이도 쓸 수 있어요
-            </AppText>
-          ) : null}
         </View>
 
         <UpdateBanner />
         <InstalledNameNotice />
 
-        <MemoryCard memories={memories} />
+        {resume ? (
+          <Card style={{ gap: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <AppIcon name={resume.icon} size={18} color="accent" />
+              <AppText variant="label">{resume.label}</AppText>
+            </View>
+            {resume.preview ? (
+              <AppText variant="bodySmall" color="secondary" numberOfLines={2}>
+                {resume.preview}
+              </AppText>
+            ) : null}
+            <Button size="compact" variant="secondary" label={resume.action} onPress={resume.go} />
+          </Card>
+        ) : null}
 
-        {/* 오늘의 목표 — 부드러운 진행 표시 (미달성 죄책감 문구 없음) */}
-        <GoalProgress
-          total={progress.total}
-          goal={progress.goal}
-          achieved={progress.achieved}
-        />
-
-        {/* 이어서 하기 카드 — 우선순위(초안 > 대화 > 연습 > 복습)로 최대 2개만 노출해 과밀 방지 */}
-        {nudgeCards.slice(0, 2)}
-
-        {/* 오늘의 편지 — 대표 카드 (raised) */}
+        {/* 오늘의 편지 — 이 화면의 주인공 */}
         <Card variant="raised" style={{ gap: spacing.lg }}>
           <AppText variant="label" color="accent">
             오늘의 편지
           </AppText>
           <Animated.View style={{ opacity: promptOpacity }}>
-            {/* 앱이 말을 거는 한 문장 — 여기만 손글씨다 (variant editorial) */}
             <AppText variant="editorial">{DAILY_PROMPTS[promptIndex]}</AppText>
           </Animated.View>
           <View style={{ gap: spacing.sm }}>
@@ -235,27 +172,14 @@ export default function TodayHome() {
           </View>
         </Card>
 
-        {/* 오늘의 일기 — 카드 하나 안의 리스트 */}
+        {/* 오늘 쓴 것 */}
         <View style={{ gap: spacing.md }}>
-          <View
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-          >
-            <AppText variant="heading">오늘의 일기</AppText>
-            <Button
-              size="compact"
-              variant="ghost"
-              icon="search"
-              label="검색"
-              onPress={() => router.push('/search')}
-            />
-          </View>
+          <AppText variant="heading">오늘의 일기</AppText>
           {todayEntries.length === 0 ? (
             <EmptyState
               icon="feather"
               title="아직 적지 않은 하루예요."
               description={'거창하지 않아도 괜찮아요.\n오늘 기억나는 장면 하나만 들려주세요.'}
-              actionLabel="AI 친구에게 이야기하기"
-              onAction={() => router.push('/write/chat')}
             />
           ) : (
             <Card style={{ paddingVertical: spacing.xs }}>
@@ -269,23 +193,6 @@ export default function TodayHome() {
               ))}
             </Card>
           )}
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <Button
-            size="compact"
-            variant="ghost"
-            icon="bar-chart-2"
-            label="학습 통계"
-            onPress={() => router.push('/stats')}
-          />
-          <Button
-            size="compact"
-            variant="ghost"
-            icon="book-open"
-            label="단어장"
-            onPress={() => router.push('/expressions')}
-          />
         </View>
       </View>
       <VersionFooter />

@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { DiaryRow } from '@/components/diary/DiaryRow';
+import { MemoryCard } from '@/components/diary/MemoryCard';
 import { AppIcon, AppMciIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Screen } from '@/components/ui/Screen';
 import { VersionFooter } from '@/components/ui/VersionFooter';
 import { formatDateKo, monthInfo, todayKey } from '@/lib/dates';
+import { findMemory } from '@/lib/onThisDay';
 import { selectActiveEntries, selectEntriesByDate, useDiary } from '@/state/useDiary';
 import { useSettings } from '@/state/useSettings';
 import { MIN_TOUCH_TARGET, radius, spacing } from '@/theme/tokens';
@@ -69,6 +71,9 @@ export default function CalendarTab() {
     `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
   const selectedEntries = selectEntriesByDate(entries, selectedDate);
+
+  // 그날의 기억은 홈이 아니라 여기 둔다 — 되돌아보는 화면이 달력이다
+  const memories = useMemo(() => findMemory(active, today), [active, today]);
 
   return (
     <Screen>
@@ -193,8 +198,22 @@ export default function CalendarTab() {
           ))}
         </View>
 
+        <MemoryCard memories={memories} />
+
         <View style={{ gap: spacing.md }}>
-          <AppText variant="subheading">{formatDateKo(selectedDate)}</AppText>
+          <View
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+          >
+            <AppText variant="subheading">{formatDateKo(selectedDate)}</AppText>
+            {/* 검색은 지난 일기를 찾는 기능이라 달력과 한 화면에 있는 게 맞다 */}
+            <Button
+              size="compact"
+              variant="ghost"
+              icon="search"
+              label="검색"
+              onPress={() => router.push('/search')}
+            />
+          </View>
           {selectedEntries.length === 0 ? (
             <EmptyState
               icon="feather"

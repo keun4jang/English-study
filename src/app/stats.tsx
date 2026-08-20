@@ -5,14 +5,16 @@ import { ActivityHeatmap } from '@/components/ui/ActivityHeatmap';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
+import { GoalProgress } from '@/components/ui/GoalProgress';
 import { MoodTrend } from '@/components/ui/MoodTrend';
 import { Screen } from '@/components/ui/Screen';
 import { calcStreakGenerous, todayKey } from '@/lib/dates';
-import { countSentences } from '@/lib/goals';
+import { computeDailyProgress, countSentences } from '@/lib/goals';
 import { getUsageLimits } from '@/lib/usageLimits';
 import { useChat } from '@/state/useChat';
 import { selectActiveEntries, useDiary } from '@/state/useDiary';
 import { useExpressions } from '@/state/useExpressions';
+import { useSettings } from '@/state/useSettings';
 import { useUsage } from '@/state/useUsage';
 import { spacing } from '@/theme/tokens';
 
@@ -54,9 +56,22 @@ export default function StatsScreen() {
   const enCount = active.filter((e) => e.language === 'en').length;
   const jaCount = active.filter((e) => e.language === 'ja').length;
 
+  // 오늘의 목표는 홈에서 옮겨 왔다. 매일 보는 화면에 진행바가 있으면 일기가 숙제처럼 보인다.
+  const dailyGoal = useSettings((s) => s.learning.dailyGoalSentences);
+  const progress = useMemo(
+    () => computeDailyProgress({ messages, entries, today, goal: dailyGoal }),
+    [messages, entries, today, dailyGoal],
+  );
+
   return (
     <Screen>
       <View style={{ gap: spacing.lg }}>
+        <GoalProgress
+          total={progress.total}
+          goal={progress.goal}
+          achieved={progress.achieved}
+        />
+
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
           <StatCard icon="book" label="작성한 일기" value={String(active.length)} />
           <StatCard icon="calendar" label="총 학습 일수" value={`${uniqueDays}일`} />
