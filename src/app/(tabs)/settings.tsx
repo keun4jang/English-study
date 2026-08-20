@@ -15,6 +15,7 @@ import { VersionFooter } from '@/components/ui/VersionFooter';
 import { isBuiltInAI } from '@/ai';
 import { appConfig, getAppEnv, isSupabaseConfigured } from '@/config/appConfig';
 import { buildBackup, parseBackup } from '@/lib/backup';
+import { backupFileName, canShareFiles, exportBackupFile } from '@/lib/exportFile';
 import { applyWebUpdate, checkForUpdate, resetAppCache } from '@/lib/updates';
 import { getUsageLimits } from '@/lib/usageLimits';
 import { useAuth } from '@/state/useAuth';
@@ -70,6 +71,8 @@ export default function SettingsTab() {
   const [nicknameEdit, setNicknameEdit] = useState('');
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [exportCopied, setExportCopied] = useState(false);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -95,9 +98,9 @@ export default function SettingsTab() {
     setCheckingUpdate(false);
   };
 
-  /** 백업 내보내기 — JSON을 클립보드로 복사 (외부로 전송되지 않아요) */
-  const exportData = async () => {
-    const text = buildBackup({
+  /** 백업 내용 만들기 — 동기다. 공유 직전에 await를 끼우면 사용자 제스처가 끊긴다. */
+  const makeBackupText = () =>
+    buildBackup({
       profile: auth.user,
       settings: {
         learning: settings.learning,
@@ -108,8 +111,45 @@ export default function SettingsTab() {
       diaries: diary.entries,
       expressions: expressions.expressions,
     });
-    await Clipboard.setStringAsync(text);
+
+  /**
+   * 백업 파일 내보내기 — 폰의 공유 시트로 넘긴다.
+   *
+   * 우리가 구글 드라이브에 직접 올리는 게 아니라, 파일을 폰에 건네주고 사용자가 드라이브든
+   * 메일이든 고르게 한다. 그래서 새 API 키도, 계정 연결도, 비용도 없다.
+   */
+  const exportFile = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportStatus(null);
+    try {
+      const result = await exportBackupFile({
+        text: makeBackupText(),
+        fileName: backupFileName(),
+        title: 'D-log 백업',
+      });
+      if (result.ok) {
+        setExportStatus(
+          result.via === 'share'
+            ? '보냈어요. 드라이브·메일 앱에서 확인해 주세요.'
+            : '파일로 저장했어요. 다운로드 폴더에 있어요.',
+        );
+      } else if (result.reason === 'cancelled') {
+        // 사용자가 그냥 닫은 것이다 — 아무 말도 하지 않는다
+        setExportStatus(null);
+      } else {
+        setExportStatus('파일로 내보내지 못했어요. 아래 "JSON 복사하기"로 저장해 주세요.');
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  /** 예전 방식 — 파일이 안 되는 환경을 위해 남겨 둔다 */
+  const exportData = async () => {
+    await Clipboard.setStringAsync(makeBackupText());
     setExportCopied(true);
+    setExportStatus(null);
     setTimeout(() => setExportCopied(false), 2500);
   };
 
@@ -183,13 +223,37 @@ export default function SettingsTab() {
           </View>
           <Button
             small
-            variant="secondary"
-            icon={exportCopied ? 'check' : 'download'}
-            label={exportCopied ? '복사됨 (메모장에 붙여넣어 보관하세요)' : '백업 내보내기 (JSON 복사)'}
+            icon="share"
+            label={
+              exporting
+                ? '준비하는 중…'
+                : canShareFiles()
+                  ? '백업 파일 내보내기'
+                  : '백업 파일로 저장하기'
+            }
+            loading={exporting}
+            onPress={exportFile}
+          />
+          <AppText variant="caption" color="secondary">
+            {canShareFiles()
+              ? '백업 파일을 만들어 폰의 공유 화면으로 보내요. 거기서 구글 드라이브에 저장하거나 메일·카카오톡으로 나에게 보낼 수 있어요.'
+              : '백업 파일을 내려받아요. 받은 파일을 구글 드라이브에 올리거나 메일에 첨부해 두면 돼요.'}
+          </AppText>
+          {exportStatus ? (
+            <AppText variant="caption" color="accent">
+              {exportStatus}
+            </AppText>
+          ) : null}
+          <Button
+            small
+            variant="ghost"
+            icon={exportCopied ? 'check' : 'copy'}
+            label={exportCopied ? '복사됨 (메모장에 붙여넣어 보관하세요)' : 'JSON 복사하기'}
             onPress={exportData}
           />
           <AppText variant="caption" color="secondary">
-            일기는 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업해 두면 그대로 옮길 수 있어요.
+            일기는 이 기기에만 저장돼요. 앱을 지우거나 폰을 바꾸면 사라지니, 가끔 백업해 두면
+            안심할 수 있어요. 백업 파일에는 일기 내용이 그대로 들어 있으니 아무 데나 올리지는 마세요.
           </AppText>
           {!restoreOpen ? (
             <Button
