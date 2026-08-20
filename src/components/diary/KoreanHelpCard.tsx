@@ -18,6 +18,42 @@ import { useTheme } from '@/theme/useTheme';
  * 말하고 '문장 만들기'로 보낸다.
  */
 
+/**
+ * 못 만들었을 때 무엇을 말할지.
+ *
+ * "이해 못 했어요"만 반복하면 사용자는 다음에 무엇을 해야 할지 모른다. **무엇까지 읽었고
+ * 어디서 막혔는지**를 말해야 다음 시도가 가능해진다. 그리고 사용자를 탓하지 않는다 —
+ * 못 읽은 건 앱 쪽이다.
+ */
+function headline(help: KoHelp): string {
+  if (help.cannotReason === 'too-complex') return '이 문장은 제가 다 못 읽었어요';
+  if (help.cannotReason === 'too-little') return '이 문장은 아직 모르는 말이 많아요';
+  return '이 문장은 아직 예시를 못 만들어요';
+}
+
+function askCopy(help: KoHelp): string {
+  if (help.cannotReason === 'too-complex') {
+    return (
+      '한 문장에 여러 이야기가 담겨 있어서 절반만 읽고 엉뚱한 영어를 만들 뻔했어요. ' +
+      '그건 보여드리지 않을게요.\n\n' +
+      '한 번에 하나씩 나눠서 써 주시면 만들 수 있어요. ' +
+      '예를 들어 "공원에서 뛰었어"를 먼저, "영상이랑 사진 찍었어"를 그다음에요. ' +
+      '아니면 아래에서 골라서 만들어도 돼요.'
+    );
+  }
+  if (help.cannotReason === 'too-little') {
+    return (
+      '이 앱의 예시는 인터넷 번역기가 아니라 기기 안에 담긴 사전으로 만들어요. ' +
+      '그래서 무료이고 비행기 안에서도 되지만, 아직 모르는 말이 있어요.\n\n' +
+      '아래에서 골라서 만들면 어떤 상황이든 문장이 완성돼요.'
+    );
+  }
+  return (
+    '이 문형은 아직 제가 못 만들어요. 조금 더 단순하게 써 주시거나, ' +
+    '아래에서 골라서 만들어 보세요.'
+  );
+}
+
 interface KoreanHelpCardProps {
   help: KoHelp;
   language: LearningLanguage;
@@ -45,7 +81,7 @@ export function KoreanHelpCard({
     <Card variant="soft" style={{ gap: spacing.md }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <AppText variant="label" color="accent">
-          {help.needsBuilder ? '이 문장은 아직 예시가 없어요' : `${languageName}로는 이렇게 말해요`}
+          {help.needsBuilder ? headline(help) : `${languageName}로는 이렇게 말해요`}
         </AppText>
         <IconButton icon="x" variant="ghost" accessibilityLabel="도움말 닫기" onPress={onDismiss} />
       </View>
@@ -97,12 +133,11 @@ export function KoreanHelpCard({
       {help.needsBuilder ? (
         <View style={{ gap: spacing.sm }}>
           <AppText variant="bodySmall" color="secondary">
-            이 앱의 예시는 기기 안에 담긴 사전으로 만들어요. 인터넷 번역기를 쓰지 않아서 무료이고
-            비행기 안에서도 되지만, 대신 아직 모르는 문장이 있어요. 대신 골라서 만들어 볼까요?
+            {askCopy(help)}
           </AppText>
           {help.words.length > 0 ? (
             <AppText variant="caption" color="secondary">
-              아는 단어: {help.words.map((word) => `${word.ko} = ${word.target}`).join(' · ')}
+              읽은 부분: {help.words.map((word) => `${word.ko} = ${word.target}`).join(' · ')}
             </AppText>
           ) : null}
           {help.nameHints.length > 0 ? (

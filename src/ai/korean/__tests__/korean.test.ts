@@ -302,3 +302,41 @@ describe('문장 만들기 선택지', () => {
     }
   });
 });
+
+describe('문장을 끝까지 못 읽으면 만들지 않는다', () => {
+  /**
+   * 실제로 보고된 사고:
+   *   "오늘 여의도 한강 공원을 뛰면서 영상과 사진 촬영을 했어"
+   *     → "I had a shoot in [뛰면서] today."
+   * 한강·공원·영상·사진을 전부 알아보고도 자리가 찼다는 이유로 버린 뒤,
+   * 남은 '뛰면서'를 장소 자리에 끼워 넣은 결과였다.
+   */
+  it('알아본 말을 버려야 하는 문장은 예시를 내놓지 않는다', () => {
+    const help = helpFromKorean('오늘 여의도 한강 공원을 뛰면서 영상과 사진 촬영을 했어', 'en');
+    expect(help.suggestions).toHaveLength(0);
+    expect(help.cannotReason).toBe('too-complex');
+  });
+
+  it('무엇을 읽었는지는 알려준다 (되묻기에 쓴다)', () => {
+    const help = helpFromKorean('오늘 여의도 한강 공원을 뛰면서 영상과 사진 촬영을 했어', 'en');
+    expect(help.understood).toEqual(expect.arrayContaining(['오늘', '한강', '공원', '사진']));
+  });
+
+  it('절이 둘인 문장도 만들지 않는다', () => {
+    expect(helpFromKorean('오늘 카페에서 책 읽고 집에 갔어', 'en').suggestions).toHaveLength(0);
+    expect(helpFromKorean('밥 먹고 나서 산책했어', 'en').suggestions).toHaveLength(0);
+  });
+
+  it('같은 자리에 두 개가 오면 만들지 않는다', () => {
+    // 장소가 둘 — 어느 쪽이 맞는지 알 수 없다
+    expect(helpFromKorean('카페에서 공원에서 놀았어', 'en').suggestions).toHaveLength(0);
+  });
+
+  it('단문은 그대로 잘 만든다 (이 판정이 멀쩡한 문장을 막지 않는다)', () => {
+    expect(first('오늘 친구랑 카페 갔어')).toBe('I went to a cafe with a friend today.');
+    expect(first('점심에 김치찌개 먹었어')).toBe('I ate kimchi stew at lunch.');
+    expect(first('어제 야근했어')).toBe('I worked late yesterday.');
+    expect(first('오늘 너무 짜증났어')).toBe('I was so annoyed today.');
+    expect(first('주말에 등산 갔어')).toBe('I went hiking over the weekend.');
+  });
+});

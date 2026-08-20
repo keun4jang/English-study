@@ -18,9 +18,18 @@ import { KoNoun, KoParse, KoSuggestion, KoUnknown } from './types';
  * 들어갈 수 있게 두되, 이미 다른 자리에서 쓴 말은 다시 쓰지 않는다.
  */
 function takeUnknown(unknown: KoUnknown[], role: KoUnknown['role'], used: Set<string>): string | null {
+  /*
+   * 조사가 없어 역할을 모르는 말은 **목적어 자리에만** 넣는다.
+   *
+   * 한국어는 목적격 조사를 자주 생략해서("떡볶이 먹었어") 조사 없는 말이 목적어인 경우가
+   * 흔하다. 반대로 장소는 거의 항상 '에/에서'를 달고 나오고 사람은 '랑/와'를 단다.
+   * 그래서 역할을 모르는 말을 장소 자리에 넣으면 십중팔구 틀린다 — 실제로 '뛰면서'와
+   * '먹고'가 그렇게 "in [뛰면서]", "in [먹고]"가 됐다.
+   */
+  const allowGeneric = role === 'object';
   const match =
     unknown.find((item) => item.role === role && !used.has(item.word)) ??
-    unknown.find((item) => item.role === 'unknown' && !used.has(item.word));
+    (allowGeneric ? unknown.find((item) => item.role === 'unknown' && !used.has(item.word)) : undefined);
   if (!match) return null;
   used.add(match.word);
   return `[${match.word}]`;
@@ -209,6 +218,23 @@ function tooEmpty(parse: KoParse): boolean {
   return genericDo && !parse.object;
 }
 
+/**
+ * 문장을 끝까지 읽지 못했는지.
+ *
+ * 여기가 이 엔진에서 제일 중요한 판단이다. 우리는 단문 하나만 다루는데, 사용자가 쓰는 문장은
+ * 그것보다 복잡할 때가 많다. 그때 **읽은 조각만으로 문장을 만들면 그럴듯하게 틀린 영어가 나온다.**
+ *
+ *   "오늘 여의도 한강 공원을 뛰면서 영상과 사진 촬영을 했어"
+ *     → 예전: "I had a shoot in [뛰면서] today."   (한강·공원·영상·사진을 알아보고도 버림)
+ *     → 지금: 만들지 않고, 무엇을 못 읽었는지 말하고 되묻는다
+ *
+ * 사용자는 나온 영어가 틀렸는지 판단할 수 없는 상태로 이걸 읽는다. 그래서 반쯤 읽은 문장은
+ * 내놓지 않는 편이 언제나 낫다.
+ */
+function partlyRead(parse: KoParse): boolean {
+  return parse.dropped.length > 0 || parse.unhandled.length > 0;
+}
+
 /** 사전에 없는 말 — 이름이면 이렇게 적으라고 제안한다 */
 function unknownHints(parse: KoParse, used: Set<string>): KoSuggestion['unknown'] {
   return parse.unknown
@@ -221,7 +247,7 @@ function unknownHints(parse: KoParse, used: Set<string>): KoSuggestion['unknown'
 }
 
 export function composeSuggestions(parse: KoParse, language: LearningLanguage): KoSuggestion[] {
-  if (tooEmpty(parse)) return [];
+  if (tooEmpty(parse) || partlyRead(parse)) return [];
 
   if (language === 'ja') {
     const jaUsed = new Set<string>();

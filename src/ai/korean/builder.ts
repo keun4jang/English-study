@@ -174,6 +174,9 @@ export function composeFromFrame(
     negated: false,
     intensified: false,
     unknown: [],
+    // 칩을 골라 만든 문장은 우리가 만든 조각뿐이라 버려지거나 못 읽은 부분이 없다
+    dropped: [],
+    unhandled: [],
   };
 
   if (frameId === 'felt') {

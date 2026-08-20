@@ -89,6 +89,41 @@ export function splitParticle(word: string): Token {
   return { base: word, particle: null };
 }
 
+/**
+ * 다른 절이 붙어 있다는 표시.
+ *
+ * 한 글자 어미(고·게·러)는 '창고·사고·보고'처럼 명사 끝에도 흔해서 넣지 않는다.
+ * 여러 글자짜리만 본다 — 이건 명사 끝에 우연히 나오는 일이 거의 없다.
+ */
+const CLAUSE_ENDINGS = [
+  '으면서', '면서', '아서', '어서', '여서', '는데', '은데', '지만',
+  '다가', '니까', '려고', '으려고', '도록', '거나', '든지', '더니',
+];
+
+/**
+ * 한 글자 어미(-고 등)는 사전에 있는 어간에 붙었을 때만 절 경계로 본다.
+ *
+ * '고'만 보고 자르면 창고·사고·보고 같은 명사가 전부 걸린다. 대신 '먹고 = 먹다 + 고'처럼
+ * **아는 동사·형용사의 어간**에 붙은 경우만 인정하면 오탐이 없다.
+ */
+const STEM_ENDINGS = ['고', '며', '자', '길래'];
+
+const KNOWN_STEMS: string[] = [
+  ...VERBS.map((verb) => verb.ko.replace(/다$/, '')),
+  ...ADJECTIVES.map((adjective) => adjective.ko.replace(/다$/, '')),
+  ...DO_VERBS.map((doVerb) => `${doVerb.ko}하`),
+];
+
+function looksLikeAnotherClause(word: string): boolean {
+  if (CLAUSE_ENDINGS.some((ending) => word.length > ending.length && word.endsWith(ending))) {
+    return true;
+  }
+  return STEM_ENDINGS.some(
+    (ending) =>
+      word.endsWith(ending) && KNOWN_STEMS.includes(word.slice(0, -ending.length)),
+  );
+}
+
 /** 조사가 알려주는 역할 */
 function roleOf(particle: string | null): KoUnknown['role'] {
   if (particle === null) return 'unknown';
@@ -243,6 +278,8 @@ export function parseKorean(input: string): KoParse {
     negated,
     intensified,
     unknown: [],
+    dropped: [],
+    unhandled: [],
   };
 
   // 하다 동사(공부했어)는 KoVerb가 아니라 별도 표에 있어서, 조립할 때 쓰도록 여기 담아 둔다
@@ -272,7 +309,8 @@ export function parseKorean(input: string): KoParse {
     // 목적어로 잡혀 만나다 틀이 사람을 못 찾는다.
     const person = PEOPLE_INDEX.get(base);
     if (person) {
-      if (!parsed.person) parsed.person = person;
+      if (parsed.person) parsed.dropped.push(base);
+      else parsed.person = person;
       continue;
     }
 
@@ -280,11 +318,17 @@ export function parseKorean(input: string): KoParse {
     if (noun) {
       const isPlaceParticle = particle !== null && PLACE_PARTICLES.includes(particle);
       const isObjectParticle = particle !== null && OBJECT_PARTICLES.includes(particle);
+      // 자리가 이미 차 있으면 **버리지 않고 기록한다.** 조용히 버리면 문장의 절반을 못 읽고도
+      // 성공한 것처럼 보인다.
       if (isPlaceParticle || (particle === null && goFrame && PLACE_INDEX.has(base))) {
-        if (!parsed.place) parsed.place = noun;
+        if (parsed.place) parsed.dropped.push(base);
+        else parsed.place = noun;
       } else if (isObjectParticle || particle === null) {
-        if (!parsed.object) parsed.object = noun;
-      } else if (!parsed.object) {
+        if (parsed.object) parsed.dropped.push(base);
+        else parsed.object = noun;
+      } else if (parsed.object) {
+        parsed.dropped.push(base);
+      } else {
         parsed.object = noun;
       }
       continue;
@@ -292,6 +336,12 @@ export function parseKorean(input: string): KoParse {
 
     // 서술어를 잘라내고 남은 어미 조각(했'어', 갈 거'야')은 단어가 아니다
     if (LEFTOVER_ENDINGS.has(base)) continue;
+
+    // 연결어미가 붙어 있으면 우리가 못 다루는 절이 하나 더 있다는 뜻이다
+    if (looksLikeAnotherClause(base)) {
+      parsed.unhandled.push(base);
+      continue;
+    }
 
     // 사전에 없는 말 — 지어내지 않고, 조사가 알려주는 역할과 함께 기록한다
     if (/[가-힣]/.test(base)) parsed.unknown.push({ word: base, role: roleOf(particle) });

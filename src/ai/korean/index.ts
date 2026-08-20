@@ -40,11 +40,28 @@ export function helpFromKorean(text: string, language: LearningLanguage): KoHelp
     .filter((item) => item.role === 'place' || item.role === 'person')
     .map((item) => ({ ko: item.word, romanized: romanize(item.word) }));
 
+  /*
+   * 왜 못 만들었는지를 화면에 넘긴다.
+   *
+   * "만들 수 없어요"만 말하면 사용자는 무엇을 바꿔야 할지 모른다. 우리가 무엇을 읽었고
+   * 무엇에서 막혔는지 알려줘야 다음 시도가 가능해진다.
+   */
+  const cannotReason: KoHelp['cannotReason'] =
+    suggestions.length > 0
+      ? null
+      : parse.dropped.length > 0 || parse.unhandled.length > 0
+        ? 'too-complex'
+        : words.length === 0
+          ? 'too-little'
+          : null;
+
   return {
     language,
     suggestions,
     needsBuilder: suggestions.length === 0,
     words,
     nameHints,
+    cannotReason,
+    understood: words.map((word) => word.ko),
   };
 }
