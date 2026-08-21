@@ -49,3 +49,8 @@ example
 
 # build output
 dist/
+
+# 임시 검사 파일 — 엔진을 손볼 때 결과를 눈으로 보려고 잠깐 만드는 테스트다.
+# 커밋 대상이 아니고, 남아 있으면 CI에서 의미 없는 console.log만 쏟아진다.
+**/__tests__/zz*.test.ts
+**/*.probe.test.ts
